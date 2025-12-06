@@ -1,0 +1,151 @@
+/***** Contenedor principal: ocupa ~70% de la pantalla y está centrado *****/
+.page-container {
+  width: 100%;            /* <-- ocupa el 70% del ancho de la ventana */
+  max-width: 1200px;     /* límite para pantallas muy grandes (opcional) */
+  min-width: 600px;      /* evita que se haga demasiado pequeño en pantallas medianas */
+  margin: 20px auto;     /* centra horizontalmente y separa del navbar */
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Mantén el fondo/tarjeta si tenías .page-card u otros — opcional */
+/* .page-card { background: #fff; ... } */
+
+/* Contenedor de las 2 columnas: ocupa todo el ancho del contenedor principal */
+.form-section {
+  display: flex;
+  flex-direction: row;
+  gap: 40px;
+  margin-top: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Cada columna ocupa la mitad (50%) del .form-section */
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+
+  /* Reparto equitativo: cada columna toma la mitad del 70% definido en .page-container */
+  flex: 1 1 0;       /* grow | shrink | base */
+  min-width: 0;      /* importante para que width:100% en inputs funcione dentro de flex */
+  box-sizing: border-box;
+}
+
+/* Inputs: que ocupen todo el ancho de su columna */
+.form-column input,
+.form-column textarea,
+.form-column select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+}
+
+/* Labels */
+.form-column label {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Botones */
+.btn-primary {
+  background-color: #1976d2;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+  align-self: flex-start; /* para que no estire el botón a todo el ancho */
+}
+
+.btn-primary:hover {
+  background-color: #115293;
+}
+
+.btn-secondary {
+  background-color: #e0e0e0;
+  color: #333;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+  align-self: flex-start;
+}
+
+.btn-secondary:hover {
+  background-color: #c7c7c7;
+}
+
+/* ======= Responsive: en pantallas pequeñas se apilan en columna ======= */
+@media (max-width: 900px) {
+  .page-container {
+    width: 92%;
+    min-width: 0;
+  }
+
+  .form-section {
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    align-self: stretch; /* botones ocupan ancho completo en móvil */
+  }
+}
+/* Filas inline para inputs con botones o íconos */
+.row-inline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+/* SECCIÓN INFERIOR DE 3 COLUMNAS */
+.three-section {
+  display: flex;
+  flex-direction: row;
+  gap: 40px;
+  margin-top: 40px;
+}
+
+.three-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Ícono documentos */
+.icon-doc {
+  font-size: 22px;
+  cursor: pointer;
+}
+
+/* Botones de navegación */
+.bottom-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 25px;
+  margin-top: 30px;
+}
+
+.arrow-btn {
+  background: #dcdcdc;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.arrow-btn:hover {
+  background: #c4c4c4;
+}
