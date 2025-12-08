@@ -1,174 +1,85 @@
-from rest_framework import viewsets, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
+from rest_framework import status
+from .db import run_query
 
-from ..models import (
-    AbogaEspecia, Abogado, Caso, Cliente, Contacto, Documento,
-    EspeciaEtapa, Especializacion, Etapaprocesal, Expediente,
-    Formapago, Franquicia, Impugnacion, Instancia, Lugar,
-    Pago, Resultado, Suceso
-)
+# ----------------------------
+# GENERADOR DE VISTAS GENERALES
+# ----------------------------
 
-from .serializers import (
-    AbogaEspeciaSerializer, AbogadoSerializer, CasoSerializer, ClienteSerializer,
-    ContactoSerializer, DocumentoSerializer, EspeciaEtapaSerializer,
-    EspecializacionSerializer, EtapaprocesalSerializer, ExpedienteSerializer,
-    FormapagoSerializer, FranquiciaSerializer, ImpugnacionSerializer,
-    InstanciaSerializer, LugarSerializer, PagoSerializer,
-    ResultadoSerializer, SucesoSerializer, TipodocumentoSerializer, Tipodocumento,
-    Tipocontact, TipocontactSerializer, Tipolugar, TipolugarSerializer
-)
+class TableView(APIView):
+    """Vista genérica para consultar cualquier tabla"""
 
-# -------------------------------
-# ----- MODELOS SIMPLES --------
-# -------------------------------
+    table = None  # Nombre real de la tabla en Oracle
+    pk = None     # Clave primaria simple (si existe)
 
-class GenericViewSet(viewsets.ModelViewSet):
-    """Para modelos que SI tienen PK simple"""
-    pass
+    # GET → devuelve todos los registros
+    def get(self, request):
+        sql = f"SELECT * FROM {self.table}"
+        data = run_query(sql)
+        return Response(data)
 
 
-class TipodocumentoView(GenericViewSet):
-    queryset = Tipodocumento.objects.all()
-    serializer_class = TipodocumentoSerializer
+# ----------------------------
+# LISTA COMPLETA DE TABLAS
+# ----------------------------
 
+class AbogadoView(TableView):
+    table = "abogado"
 
-class TipocontactView(GenericViewSet):
-    queryset = Tipocontact.objects.all()
-    serializer_class = TipocontactSerializer
+class ClienteView(TableView):
+    table = "cliente"
 
+class CasoView(TableView):
+    table = "caso"
 
-class TipolugarView(GenericViewSet):
-    queryset = Tipolugar.objects.all()
-    serializer_class = TipolugarSerializer
+class ContactoView(TableView):
+    table = "contacto"
 
+class DocumentoView(TableView):
+    table = "documento"
 
-class FormapagoView(GenericViewSet):
-    queryset = Formapago.objects.all()
-    serializer_class = FormapagoSerializer
+class EspeciaEtapaView(TableView):
+    table = "especia_etapa"
 
+class EspecializacionView(TableView):
+    table = "especializacion"
 
-class FranquiciaView(GenericViewSet):
-    queryset = Franquicia.objects.all()
-    serializer_class = FranquiciaSerializer
+class EtapaprocesalView(TableView):
+    table = "etapaprocesal"
 
+class ExpedienteView(TableView):
+    table = "expediente"
 
-# -------------------------------
-# ----- MODELOS PRINCIPALES ----
-# -------------------------------
+class FormapagoView(TableView):
+    table = "formapago"
 
-class ClienteView(GenericViewSet):
-    queryset = Cliente.objects.all()
-    serializer_class = ClienteSerializer
+class FranquiciaView(TableView):
+    table = "franquicia"
 
+class ImpugnacionView(TableView):
+    table = "impugnacion"
 
-class AbogadoView(GenericViewSet):
-    queryset = Abogado.objects.all()
-    serializer_class = AbogadoSerializer
+class InstanciaView(TableView):
+    table = "instancia"
 
+class LugarView(TableView):
+    table = "lugar"
 
-class EspecializacionView(GenericViewSet):
-    queryset = Especializacion.objects.all()
-    serializer_class = EspecializacionSerializer
+class PagoView(TableView):
+    table = "pago"
 
+class ResultadoView(TableView):
+    table = "resultado"
 
-class CasoView(GenericViewSet):
-    queryset = Caso.objects.all()
-    serializer_class = CasoSerializer
+class SucesoView(TableView):
+    table = "suceso"
 
+class TipocontactView(TableView):
+    table = "tipocontact"
 
-class PagoView(GenericViewSet):
-    queryset = Pago.objects.all()
-    serializer_class = PagoSerializer
+class TipodocumentoView(TableView):
+    table = "tipodocumento"
 
-
-class LugarView(GenericViewSet):
-    queryset = Lugar.objects.all()
-    serializer_class = LugarSerializer
-
-
-# -----------------------------------------
-# ----- HANDLER PARA PK COMPUESTAS -------
-# -----------------------------------------
-
-class CompositePKViewSet(viewsets.ViewSet):
-    """Vista base para modelos con llaves compuestas"""
-
-    model = None
-    serializer_class = None
-    pk_fields = []   # Lista de campos que forman la PK
-
-    def get_object(self, **kwargs):
-        """Buscar el objeto usando un dict de la PK compuesta"""
-        filters = {field: kwargs[field] for field in self.pk_fields}
-        return get_object_or_404(self.model, **filters)
-
-    def list(self, request):
-        queryset = self.model.objects.all()
-        serializer = self.serializer_class(queryset, many=True)
-        return Response(serializer.data)
-
-    def retrieve(self, request, **kwargs):
-        obj = self.get_object(**kwargs)
-        serializer = self.serializer_class(obj)
-        return Response(serializer.data)
-
-    def create(self, request):
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def update(self, request, **kwargs):
-        obj = self.get_object(**kwargs)
-        serializer = self.serializer_class(obj, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def destroy(self, request, **kwargs):
-        obj = self.get_object(**kwargs)
-        obj.delete()
-        return Response(status=204)
-
-
-# -----------------------------------------
-# ---- MODELOS CON PK COMPUESTA ----------
-# -----------------------------------------
-
-class ContactoView(CompositePKViewSet):
-    model = Contacto
-    serializer_class = ContactoSerializer
-    pk_fields = ["codcliente", "consecontacto"]
-
-
-class DocumentoView(CompositePKViewSet):
-    model = Documento
-    serializer_class = DocumentoSerializer
-    pk_fields = ["nocaso", "codespecializacion", "pasoetapa", "consecexpe", "condoc"]
-
-
-class EspeciaEtapaView(CompositePKViewSet):
-    model = EspeciaEtapa
-    serializer_class = EspeciaEtapaSerializer
-    pk_fields = ["codespecializacion", "pasoetapa"]
-
-
-class ExpedienteView(CompositePKViewSet):
-    model = Expediente
-    serializer_class = ExpedienteSerializer
-    pk_fields = ["nocaso", "codespecializacion", "pasoetapa", "consecexpe"]
-
-
-class ResultadoView(CompositePKViewSet):
-    model = Resultado
-    serializer_class = ResultadoSerializer
-    pk_fields = ["nocaso", "codespecializacion", "pasoetapa", "consecexpe", "conresul"]
-
-
-class SucesoView(CompositePKViewSet):
-    model = Suceso
-    serializer_class = SucesoSerializer
-    pk_fields = ["nocaso", "codespecializacion", "pasoetapa", "consecexpe", "consuceso"]
+class TipolugarView(TableView):
+    table = "tipolugar"
