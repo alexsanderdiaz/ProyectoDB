@@ -84,8 +84,6 @@ def buscar_cliente_con_caso_activo(nombre=None, apellido=None, documento=None):
 
 # funcion para escribir el caso consecutivo
 
-# --- En caso_service.py, junto a buscar_cliente_con_caso_activo ---
-
 def obtener_siguiente_no_caso():
 
     #Busca el valor máximo de NOCASO en la tabla CASO y devuelve el siguiente consecutivo.
@@ -109,3 +107,12 @@ def obtener_siguiente_no_caso():
     
     # Sumamos 1 para obtener el siguiente consecutivo.
     return max_caso + 1
+
+def obtener_especializaciones():
+    """
+    Obtiene la lista de códigos y nombres de especialización.
+    """
+    sql = "SELECT CODESPECIALIZACION AS cod_especializacion, NOMESPECIALIZACION AS nombre_especializacion FROM ESPECIALIZACION"
+    
+    # fetch="all" para obtener todos los registros
+    return run_query(sql, fetch="all")

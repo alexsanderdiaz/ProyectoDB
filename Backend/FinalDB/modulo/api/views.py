@@ -2,11 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .db import run_query
-from .services.caso_service import buscar_cliente_con_caso_activo, obtener_siguiente_no_caso
+from .services.caso_service import (
+    buscar_cliente_con_caso_activo,
+    obtener_siguiente_no_caso,
+    obtener_especializaciones
+)
 
-# ----------------------------
-# GENERADOR DE VISTAS GENERALES
-# ----------------------------
+# VISTAS GENERALES
 
 class TableView(APIView):
     """Vista genérica para consultar cualquier tabla"""
@@ -21,9 +23,8 @@ class TableView(APIView):
         return Response(data)
 
 
-# ----------------------------
 # LISTA COMPLETA DE TABLAS
-# ----------------------------
+
 
 class AbogadoView(TableView):
     table = "abogado"
@@ -85,7 +86,7 @@ class TipodocumentoView(TableView):
 class TipolugarView(TableView):
     table = "tipolugar"
 
-# Gestiones
+# GESTIONES
 
 class GestionCasoBusquedaView(APIView):
     def get(self, request):
@@ -117,6 +118,7 @@ class GestionCasoBusquedaView(APIView):
                 },
                 status=status.HTTP_404_NOT_FOUND 
             )
+
         
 class GestionCasoSiguienteNoCasoView(APIView):
     """Vista para obtener el siguiente número de caso consecutivo."""
@@ -126,4 +128,14 @@ class GestionCasoSiguienteNoCasoView(APIView):
             return Response({"siguiente_nocaso": siguiente_id}, status=status.HTTP_200_OK)
         except Exception as e:
             # Manejo básico de errores de base de datos o lógica
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class EspecializacionListView(APIView):
+    """Vista para obtener la lista de todas las especializaciones."""
+    def get(self, request):
+        try:
+            especializaciones = obtener_especializaciones()
+            return Response(especializaciones, status=status.HTTP_200_OK)
+        except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -40,6 +40,18 @@ export async function fetchSiguienteNoCaso() {
     return data.siguiente_nocaso; 
 }
 
+//Lista de especializaciones
+
+export async function fetchEspecializaciones() {
+    const url = `${API_BASE_URL}datos-auxiliares/especializaciones/`; 
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Error al obtener especializaciones: ${response.status}`);
+    }
+    return response.json(); 
+}
+
 
 // Lógica de Creación (Próximo paso)
 export async function createNewCase(clienteId, caseData) {
@@ -57,3 +69,4 @@ export async function createNewCase(clienteId, caseData) {
     }
     return response.json();
 }
+

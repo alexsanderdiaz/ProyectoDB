@@ -11,12 +11,13 @@ export default function CasoPage() {
         clienteExiste,
         casoActivoExiste,
         casoData,
-        listaCasosActivos, // 🛑 Nuevo
+        listaCasosActivos, 
         handleSearch,
         handleCrearCaso,
-        handleSelectCaso, // 🛑 Nuevo
+        handleSelectCaso, 
         isCaseInputDisabled,
         handleCasoChange,
+        listaEspecializaciones,
     } = useCasoLogic();
 
     // Requisito: Todos los elementos están deshabilitados con excepción el nombre Cliente.
@@ -32,7 +33,7 @@ export default function CasoPage() {
                     <label>No Caso</label>
                     <div className="row-inline">
                         
-                        {/* 🛑 Implementación de lista desplegable (Requisito c) */}
+                        {/* lista desplegable  */}
                         {casoActivoExiste && listaCasosActivos.length > 1 ? (
                             <select
                                 value={casoData.nocaso}
@@ -86,14 +87,26 @@ export default function CasoPage() {
                     />
 
                     <label>Especialización</label>
-                    <input 
-                        type="text" //  Aquí podrías usar un <select> si tienes una lista estática de especializaciones
+                    <select
                         name="especializacion"
                         value={casoData.especializacion} 
                         onChange={handleCasoChange}
-                        disabled={isCaseInputDisabled} // Habilitado solo en modo "Crear" (Requisito f)
-                        placeholder="Especialización" 
-                    />
+                        disabled={isCaseInputDisabled} 
+                    >
+                        {/* Opción por defecto (vacía o deshabilitada) */}
+                        <option value="" disabled>Seleccione una especialización</option>
+
+                        {/* Mapear las especializaciones cargadas */}
+                        {listaEspecializaciones.map(esp => (
+                            <option 
+                                key={esp.cod_especializacion} 
+                                // El valor que se guarda en casoData.especializacion es el código (PEN, CIV, etc.)
+                                value={esp.cod_especializacion}
+                            >
+                                {esp.nombre_especializacion} {/* Lo que ve el usuario */}
+                            </option>
+                        ))}
+                    </select>
 
                     <label>Valor</label>
                     <input 
