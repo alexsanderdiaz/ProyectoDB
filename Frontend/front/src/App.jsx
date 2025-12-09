@@ -1,8 +1,8 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
-import Caso from "./pages/Caso";
-import Expediente from "./pages/Expediente";
+import CasoPage from "./pages/CasoPage";
+import ExpedientePage from "./pages/ExpedientePage";
 
 export default function App() {
   return (
@@ -11,9 +11,9 @@ export default function App() {
 
       <div style={{ paddingTop: "80px", paddingLeft: "20px", paddingRight: "20px" }}>
         <Routes>
-          <Route path="/caso" element={<Caso />} />
-          <Route path="/expediente" element={<Expediente />} />
-          <Route path="*" element={<Caso />} />
+          <Route path="/caso" element={<CasoPage/>} />
+          <Route path="/expediente" element={<ExpedientePage />} />
+          <Route path="*" element={<CasoPage />} />
         </Routes>
       </div>
     </BrowserRouter>

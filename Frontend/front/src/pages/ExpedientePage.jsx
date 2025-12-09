@@ -1,7 +1,7 @@
 import React from "react";
 import "../styles/Pages.css";
 
-export default function Expediente() {
+export default function ExpedientePage() {
   return (
     <div className="page-container">
 
