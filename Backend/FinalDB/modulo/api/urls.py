@@ -24,4 +24,5 @@ urlpatterns = [
     path("tipolugar/", TipolugarView.as_view()),
     
     path("gestion-caso/buscar-cliente/", GestionCasoBusquedaView.as_view()),
+    path('gestion-caso/siguiente-nocaso/', GestionCasoSiguienteNoCasoView.as_view()),
 ]

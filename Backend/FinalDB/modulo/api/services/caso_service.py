@@ -81,3 +81,31 @@ def buscar_cliente_con_caso_activo(nombre=None, apellido=None, documento=None):
         "encontrado": False,
         "mensaje": "Cliente no encontrado. ¿Desea crear un nuevo cliente?"
     }
+
+# funcion para escribir el caso consecutivo
+
+# --- En caso_service.py, junto a buscar_cliente_con_caso_activo ---
+
+def obtener_siguiente_no_caso():
+
+    #Busca el valor máximo de NOCASO en la tabla CASO y devuelve el siguiente consecutivo.
+    #Si no hay casos, devuelve 1.
+    # Usamos un alias (AS max_nocaso) para que el diccionario devuelto por run_query
+    # tenga una clave predecible: 'max_nocaso' (en minúsculas por tu run_query)
+
+    sql = "SELECT MAX(NOCASO) AS max_nocaso FROM CASO"
+    
+    # solo se espera un resultado
+    result = run_query(sql, fetch="one") 
+    
+    # result será un diccionario como: {'max_nocaso': 123} o {'max_nocaso': None} (si la tabla está vacía).
+    
+    # Intentamos obtener el valor usando .get(). Si result es None, get() ni se llama.
+    max_caso = result.get('max_nocaso') if result else None
+
+    # Si max_caso es None (tabla vacía), lo establecemos en 0.
+    if max_caso is None:
+        max_caso = 0
+    
+    # Sumamos 1 para obtener el siguiente consecutivo.
+    return max_caso + 1

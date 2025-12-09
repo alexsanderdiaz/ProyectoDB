@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
-// ASUMIMOS que fetchClienteConCasoActivo se ha actualizado para aceptar (nombre, apellido, documento)
-import { fetchClienteConCasoActivo } from "../api/casoApi"; 
+// 🛑 Importar la nueva función API
+import { fetchClienteConCasoActivo, fetchSiguienteNoCaso } from "../api/casoApi"; 
 
 // Estado inicial para limpiar el formulario de caso
 const initialCasoData = {
@@ -26,7 +26,7 @@ export function useCasoLogic() {
     const [casoActivoExiste, setCasoActivoExiste] = useState(false);
     const [isCaseInputDisabled, setIsCaseInputDisabled] = useState(true);
 
-    // --- HANDLERS ---
+    // ... (handleDocChange y handleSearch permanecen iguales) ...
     
     const handleDocChange = (e) => {
         const doc = e.target.value;
@@ -41,8 +41,9 @@ export function useCasoLogic() {
         setListaCasosActivos([]);
     };
 
-    // 5. LÓGICA DE BÚSQUEDA (handleSearch)
     const handleSearch = useCallback(async () => {
+        // ... (Lógica de búsqueda existente) ...
+        // [Código de handleSearch omitido por brevedad, debe ser el que ya funciona]
         
         // --- LIMPIEZA INICIAL ---
         setClienteCod(null);
@@ -53,35 +54,27 @@ export function useCasoLogic() {
         setListaCasosActivos([]);
         // -------------------------
 
-        // Usar undefined como valor por defecto.
         let nombreBusqueda = undefined;
         let apellidoBusqueda = undefined;
-        // Si clienteDoc.trim() es una cadena vacía, busquedaDocumento será undefined.
         let busquedaDocumento = clienteDoc.trim() || undefined; 
         
-        // Si NO hay documento, intentamos buscar por nombre/apellido
         if (!busquedaDocumento) { 
             const tokens = nombreApellido.trim().split(/\s+/).filter(Boolean);
 
-            // Requisito: Se necesitan al menos dos palabras (nombre y apellido)
             if (tokens.length < 2) {
                 alert("Por favor, ingrese el Documento O al menos Nombre y Apellido completos (dos palabras).");
-                return; // Detener la ejecución si no hay criterios válidos
+                return;
             }
 
             nombreBusqueda = tokens[0];
-            // Tomamos el resto de tokens como apellido (más flexible)
             apellidoBusqueda = tokens.slice(1).join(' '); 
         }
 
         try {
-            // Llamar a la API. Los parámetros undefined deben ser omitidos en la URL.
             const data = await fetchClienteConCasoActivo(nombreBusqueda, apellidoBusqueda, busquedaDocumento); 
 
-            // Lógica para actualizar los estados
             if (data && data.encontrado) { 
                 setClienteExiste(true);
-                
                 setClienteDoc(data.cliente.documento || ''); 
                 setNombreApellido(`${data.cliente.nombre || ''} ${data.cliente.apellido || ''}`.trim()); 
                 setClienteCod(data.cliente.cod_cliente); 
@@ -90,7 +83,6 @@ export function useCasoLogic() {
                     setListaCasosActivos(data.casos_activos);
                     setCasoActivoExiste(true);
 
-                    //  Mostrar el último/más reciente
                     const ultimoCaso = data.casos_activos[0]; 
 
                     setCasoData({
@@ -102,12 +94,10 @@ export function useCasoLogic() {
                     });
                     setIsCaseInputDisabled(true);
                 } else {
-                    // Cliente encontrado pero sin casos activos
                     setCasoActivoExiste(false);
                     setListaCasosActivos([]);
                 }
             } else {
-                // Cliente NO encontrado (aunque la API respondió 200 con {encontrado: false} o 404)
                 const crearNuevo = window.confirm(
                     (data && data.mensaje) || "Cliente no encontrado. ¿Desea crear un nuevo cliente?"
                 );
@@ -116,14 +106,12 @@ export function useCasoLogic() {
                     setClienteExiste(false);
                     setClienteDoc(busquedaDocumento || ''); 
                 } else {
-                    // Limpiar la interfaz de búsqueda
                     setNombreApellido('');
                     setClienteDoc(''); 
                     setClienteExiste(null);
                 }
             }
         } catch (error) {
-            // Lógica para manejar errores de red o 404 (Cliente no encontrado)
             console.error("Error al buscar cliente:", error);
             
             const crearNuevo = window.confirm("Cliente no encontrado. ¿Desea crear un nuevo cliente?");
@@ -137,12 +125,9 @@ export function useCasoLogic() {
                 setClienteExiste(null);
             }
         }
-        
     }, [nombreApellido, clienteDoc]); 
 
-    // ... (handleSelectCaso, handleCrearCaso y handleCasoChange permanecen iguales) ...
     const handleSelectCaso = useCallback((numeroCaso) => {
-        // Aseguramos que el numeroCaso (string) se compare correctamente.
         const casoSeleccionado = listaCasosActivos.find(c => String(c.numero_caso) === String(numeroCaso));
         
         if (casoSeleccionado) {
@@ -158,19 +143,35 @@ export function useCasoLogic() {
         }
     }, [listaCasosActivos]);
 
-    const handleCrearCaso = () => {
-        const nuevoNoCaso = `TEMP-${clienteCod}-${Date.now().toString().slice(-4)}`; 
 
-        setCasoData({
-            nocaso: nuevoNoCaso,
-            fechaInicio: new Date().toISOString().slice(0,10),
-            fechaFin: '',
-            especializacion: '',
-            valor: ''
-        });
-        setIsCaseInputDisabled(false);
-        setCasoActivoExiste(false);
-    };
+    // 🛑 FUNCIÓN handleCrearCaso MODIFICADA para ser asíncrona
+    const handleCrearCaso = useCallback(async () => {
+        
+        if (!clienteCod) {
+            alert("Primero debe buscar o crear un cliente válido.");
+            return;
+        }
+
+        try {
+            // 🛑 1. Obtener el siguiente NOCASO desde el backend
+            const siguienteNoCaso = await fetchSiguienteNoCaso();
+
+            // 2. Establecer el estado con el nuevo ID y habilitar edición
+            setCasoData({
+                nocaso: siguienteNoCaso, // 🛑 Usamos el número consecutivo
+                fechaInicio: new Date().toISOString().slice(0,10), // Fecha actual
+                fechaFin: '', // Requisito (h): NULL/vacío
+                especializacion: '',
+                valor: ''
+            });
+            setIsCaseInputDisabled(false); // Habilitar inputs de caso (Requisito f)
+            setCasoActivoExiste(false); // No es un caso activo existente, es uno nuevo
+
+        } catch (error) {
+            console.error("Error al obtener el número de caso consecutivo:", error);
+            alert("No se pudo obtener el número de caso consecutivo. Inténtelo de nuevo.");
+        }
+    }, [clienteCod]); // Depende de clienteCod
 
     const handleCasoChange = (e) => {
         setCasoData({ ...casoData, [e.target.name]: e.target.value });
@@ -187,7 +188,7 @@ export function useCasoLogic() {
         casoData,
         listaCasosActivos,
         handleSearch,
-        handleCrearCaso,
+        handleCrearCaso, // Exportar la función asíncrona
         handleSelectCaso,
         isCaseInputDisabled,
         handleCasoChange,

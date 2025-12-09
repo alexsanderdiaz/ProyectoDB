@@ -87,7 +87,7 @@ export default function CasoPage() {
 
                     <label>Especialización</label>
                     <input 
-                        type="text" // 🛑 Aquí podrías usar un <select> si tienes una lista estática de especializaciones
+                        type="text" //  Aquí podrías usar un <select> si tienes una lista estática de especializaciones
                         name="especializacion"
                         value={casoData.especializacion} 
                         onChange={handleCasoChange}
