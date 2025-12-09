@@ -7,6 +7,7 @@ export default function CasoPage() {
         nombreApellido,
         setNombreApellido,
         clienteDoc,
+        handleDocChange, // 🛑 Obtener el nuevo handler
         clienteExiste,
         casoActivoExiste,
         casoData,
@@ -23,6 +24,7 @@ export default function CasoPage() {
 
                 {/* Columna izquierda (Datos del Caso) */}
                 <div className="form-column">
+                    {/* ... (Código de Columna Izquierda, sin cambios aquí) ... */}
                     <label>No Caso</label>
                     <div className="row-inline">
                         <input 
@@ -45,7 +47,7 @@ export default function CasoPage() {
                     <label>Fecha Inicio</label>
                     <input 
                         type="date" 
-                        name="fechaInicio" // Agregar el atributo name
+                        name="fechaInicio" 
                         value={casoData.fechaInicio} 
                         onChange={handleCasoChange}
                         disabled={isCaseInputDisabled}
@@ -57,7 +59,7 @@ export default function CasoPage() {
                         name="fechaFin"
                         value={casoData.fechaFin} 
                         onChange={handleCasoChange}
-                        disabled={true} // Siempre deshabilitado (Punto 3.h)
+                        disabled={true} // Siempre deshabilitado
                     />
 
                     <label>Especialización</label>
@@ -96,13 +98,13 @@ export default function CasoPage() {
                             value={nombreApellido}
                             onChange={(e) => setNombreApellido(e.target.value)}
                         />
-                         {/* Botón Lupa para buscar */}
+                        {/* Botón Lupa para buscar */}
                         <button className="search-btn" onClick={handleSearch}>
                             🔍
                         </button>
                     </div>
                     
-                    {/* Botón Crear Cliente (Punto 3.a) */}
+                    {/* Botón Crear Cliente */}
                     {clienteExiste === false && (
                         <button className="btn-secondary">Crear Cliente</button> 
                     )}
@@ -111,7 +113,8 @@ export default function CasoPage() {
                     <input 
                         type="text" 
                         value={clienteDoc} 
-                        disabled={true} 
+                        //onChange={handleDocChange}
+                        disabled={true}
                         placeholder="Documento"
                     />
                     
