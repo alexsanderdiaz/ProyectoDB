@@ -1,4 +1,4 @@
-import { useCasoLogic } from "../hooks/useCaso"; // IMPORTAR EL HOOK
+import { useCasoLogic } from "../hooks/useCaso"; 
 import "../styles/Pages.css"; 
 
 export default function CasoPage() {
@@ -7,15 +7,20 @@ export default function CasoPage() {
         nombreApellido,
         setNombreApellido,
         clienteDoc,
-        handleDocChange, // 🛑 Obtener el nuevo handler
+        handleDocChange, 
         clienteExiste,
         casoActivoExiste,
         casoData,
+        listaCasosActivos, // 🛑 Nuevo
         handleSearch,
         handleCrearCaso,
+        handleSelectCaso, // 🛑 Nuevo
         isCaseInputDisabled,
         handleCasoChange,
     } = useCasoLogic();
+
+    // Requisito: Todos los elementos están deshabilitados con excepción el nombre Cliente.
+    // Esto se maneja con el estado isCaseInputDisabled, que es true por defecto.
 
     return (
         <div className="page-container">
@@ -24,16 +29,34 @@ export default function CasoPage() {
 
                 {/* Columna izquierda (Datos del Caso) */}
                 <div className="form-column">
-                    {/* ... (Código de Columna Izquierda, sin cambios aquí) ... */}
                     <label>No Caso</label>
                     <div className="row-inline">
-                        <input 
-                            type="text" 
-                            value={casoData.nocaso} 
-                            disabled={true} 
-                        />
-                        {/* Botón "Crear" que aparece frente a No Caso */}
-                        {clienteExiste && !casoActivoExiste && (
+                        
+                        {/* 🛑 Implementación de lista desplegable (Requisito c) */}
+                        {casoActivoExiste && listaCasosActivos.length > 1 ? (
+                            <select
+                                value={casoData.nocaso}
+                                onChange={(e) => handleSelectCaso(e.target.value)}
+                                disabled={!isCaseInputDisabled} // Solo si no estamos en modo "crear"
+                            >
+                                {listaCasosActivos.map(caso => (
+                                    <option key={caso.numero_caso} value={caso.numero_caso}>
+                                        {caso.numero_caso} - {caso.especializacion}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            // Si solo hay 0 o 1 caso, o si estamos creando uno nuevo (no se usa select), usa un INPUT
+                            <input 
+                                type="text" 
+                                value={casoData.nocaso} 
+                                disabled={true} 
+                            />
+                        )}
+
+                        {/* Botón "Crear" (Requisito e) */}
+                        {/* Aparece si el cliente existe Y los inputs de caso están deshabilitados (no estamos editando/creando) */}
+                        {clienteExiste && isCaseInputDisabled && (
                             <button 
                                 className="btn-secondary" 
                                 onClick={handleCrearCaso}
@@ -50,7 +73,7 @@ export default function CasoPage() {
                         name="fechaInicio" 
                         value={casoData.fechaInicio} 
                         onChange={handleCasoChange}
-                        disabled={isCaseInputDisabled}
+                        disabled={isCaseInputDisabled} // Habilitado solo en modo "Crear" (Requisito f)
                     />
 
                     <label>Fecha Fin</label>
@@ -59,16 +82,16 @@ export default function CasoPage() {
                         name="fechaFin"
                         value={casoData.fechaFin} 
                         onChange={handleCasoChange}
-                        disabled={true} // Siempre deshabilitado
+                        disabled={true} // Siempre deshabilitado (Requisito h)
                     />
 
                     <label>Especialización</label>
                     <input 
-                        type="text" 
+                        type="text" // 🛑 Aquí podrías usar un <select> si tienes una lista estática de especializaciones
                         name="especializacion"
                         value={casoData.especializacion} 
                         onChange={handleCasoChange}
-                        disabled={isCaseInputDisabled}
+                        disabled={isCaseInputDisabled} // Habilitado solo en modo "Crear" (Requisito f)
                         placeholder="Especialización" 
                     />
 
@@ -78,12 +101,14 @@ export default function CasoPage() {
                         name="valor"
                         value={casoData.valor} 
                         onChange={handleCasoChange}
-                        disabled={isCaseInputDisabled}
+                        disabled={isCaseInputDisabled} // Habilitado solo en modo "Crear" (Requisito f)
                         placeholder="Valor" 
                     />
 
                     {/* Botones */}
+                    {/* Solo habilitados si isCaseInputDisabled es FALSE (modo crear/editar) */}
                     <button className="btn-primary" disabled={isCaseInputDisabled}>Guardar Caso</button>
+                    {/* Requisito (g) */}
                     <button className="btn-primary" disabled={isCaseInputDisabled}>Acuerdo Pago</button> 
                 </div>
 
@@ -97,6 +122,7 @@ export default function CasoPage() {
                             placeholder="Nombre y Apellido" 
                             value={nombreApellido}
                             onChange={(e) => setNombreApellido(e.target.value)}
+                            // Requisito: ÚNICO campo habilitado inicialmente
                         />
                         {/* Botón Lupa para buscar */}
                         <button className="search-btn" onClick={handleSearch}>
@@ -104,7 +130,7 @@ export default function CasoPage() {
                         </button>
                     </div>
                     
-                    {/* Botón Crear Cliente */}
+                    {/* Botón Crear Cliente (Requisito a) */}
                     {clienteExiste === false && (
                         <button className="btn-secondary">Crear Cliente</button> 
                     )}
@@ -113,8 +139,8 @@ export default function CasoPage() {
                     <input 
                         type="text" 
                         value={clienteDoc} 
-                        //onChange={handleDocChange}
-                        disabled={true}
+                        // onChange={handleDocChange} // Se mantiene comentado/eliminado según tu petición
+                        disabled={true} // Se mantiene deshabilitado según tu petición
                         placeholder="Documento"
                     />
                     
