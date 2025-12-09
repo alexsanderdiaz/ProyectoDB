@@ -91,36 +91,29 @@ class GestionCasoBusquedaView(APIView):
     def get(self, request):
         nombre = request.query_params.get('nombre')
         apellido = request.query_params.get('apellido')
+        # Obtener el documento del query params
+        documento = request.query_params.get('documento') 
 
-        if not nombre or not apellido:
+        # Revisar si se envía documento O nombre y apellido
+        if not documento and (not nombre or not apellido):
             return Response(
-                {"error": "Se requieren nombre y apellido"}, 
+                {"error": "Se requieren documento O nombre y apellido"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        resultado = buscar_cliente_con_caso_activo(nombre, apellido)
+        # Llamar al servicio, que ahora acepta documento
+        resultado = buscar_cliente_con_caso_activo(nombre, apellido, documento)
 
-        if resultado:
-            # Mapeamos los campos exactos de la tabla Cliente
-            # run_query devuelve las llaves en minúscula
-            return Response({
-                "encontrado": True,
-                "cliente": {
-                    "cod_cliente": resultado['codcliente'], 
-                    "documento": resultado['ndocumento'],
-                    "nombre": resultado['nomcliente'],
-                    "apellido": resultado['apellcliente']
-                },
-                "caso_activo": {
-                    "numero_caso": resultado['nocaso'], 
-                    "fecha_inicio": resultado['fechainicio'],
-                    "especializacion": resultado['codespecializacion'],
-                    "valor": resultado['valor']
-                } if resultado['nocaso'] else None 
-                # Si 'nocaso' es None, el front sabe que debe habilitar "Crear Caso" [cite: 36]
-            })
+        if resultado and resultado.get('encontrado'):
+            # Devolver el resultado completo (cliente + lista de casos) con status 200 OK
+            return Response(resultado, status=status.HTTP_200_OK)
         else:
-            return Response({
-                "encontrado": False,
-                "mensaje": "Cliente no encontrado. Habilitar creación."
-            })
+            # 🛑 CAMBIO CLAVE: Devolver 404 NOT FOUND si no se encuentra el cliente
+            return Response(
+                {
+                    "encontrado": False,
+                    # El mensaje del servicio es más descriptivo
+                    "mensaje": resultado.get('mensaje', "Cliente no encontrado.") 
+                },
+                status=status.HTTP_404_NOT_FOUND 
+            )
