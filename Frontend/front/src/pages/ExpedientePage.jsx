@@ -15,28 +15,30 @@ export default function ExpedientePage() {
         handleExpedienteChange,
         handleGuardarExpediente,
         handleCrearExpediente,
+        abogadosList,
+        lugaresList,
         isCaseFound,
         isCaseClosed,
         isCreateModeInitial,
-        isFullEditable,      // Controla si los campos son editables
+        isCreateModeActive, 
+        isFullEditable,
         isGuardarDisabled,
     } = useExpedienteLogic(); 
 
-    // Determina si se debe mostrar un mensaje de 'No Encontrado'
-    const caseNotFound = error && !isCaseFound && !isCreateModeInitial && !loading;
+    const caseNotFound = error && !isCaseFound && !isCreateModeInitial && !isCreateModeActive && !loading;
 
     return (
         <div className="page-container">
             
             {/* ======= MENSAJES DE ESTADO ======= */}
-            {loading && <div className="loading">Cargando expediente...</div>}
+            {loading && <div className="loading">Cargando datos...</div>}
             {caseNotFound && <div className="error">{error}</div>}
             
-            {/* Mensajes de modo (Reglas A, B, C) */}
-            {isCaseClosed && <div className="info">Caso Cerrado. Solo Modo Lectura .</div>}
-            {isCreateModeInitial && <div className="warning">Caso {expedienteData.nocaso} NO encontrado. Debe registrar un caso con ese ID.</div>}
-            {isFullEditable && !isCaseClosed && expedienteData.idexpediente !== 'NUEVO' && <div className="success">Caso Abierto. Se permite Actualizar.</div>}
-            {expedienteData.idexpediente === 'NUEVO' && <div className="warning">Modo Creación Activo. Rellene los campos y Guarde.</div>}
+            {/* Mensajes de modo (Reglas A, B, C, D) */}
+            {isCaseClosed && <div className="info">Caso Cerrado. Solo Modo Lectura.</div>}
+            {isCreateModeInitial && <div className="warning">Caso {expedienteData.nocaso} NO encontrado. Presione 'Crear'.</div>}
+            {isCreateModeActive && <div className="warning">Modo Creación Activo. Complete los campos y Guarde.</div>}
+            {isCaseFound && !isCaseClosed && <div className="success">Caso Abierto. Se permite Actualizar.</div>}
 
 
             {/* ======= SECCIÓN SUPERIOR (2 COLUMNAS) ======= */}
@@ -51,17 +53,18 @@ export default function ExpedientePage() {
                             type="text" 
                             placeholder="Número de expediente" 
                             value={expedienteData.idexpediente || ''}
-                            readOnly 
+                            readOnly // i. No se puede modificar
                         />
-                        {/* 🛑 BOTÓN CREAR (Habilitado solo en modo 'isCreateModeInitial') 🛑 */}
-                        <button 
-                            className="btn-secondary"
-                            onClick={handleCrearExpediente}
-                            // Habilitado si se debe iniciar el modo creación (Regla C)
-                            disabled={!isCreateModeInitial || expedienteData.idexpediente === 'NUEVO'}
-                        >
-                            Crear
-                        </button>
+                        {/* 🛑 BOTÓN CREAR (Aparece solo en modo isCreateModeInitial) 🛑 */}
+                        {isCreateModeInitial && (
+                            <button 
+                                className="btn-secondary"
+                                onClick={handleCrearExpediente}
+                                disabled={loading}
+                            >
+                                Crear
+                            </button>
+                        )}
                     </div>
 
                     <label>No. Etapa</label>
@@ -70,8 +73,8 @@ export default function ExpedientePage() {
                         name="noetapa"
                         placeholder="Número de etapa" 
                         value={expedienteData.noetapa || ''}
-                        onChange={handleExpedienteChange}
-                        disabled={!isFullEditable} // Aplica Reglas A y C inicial
+                        readOnly // ii. No se puede modificar
+                        disabled={!isFullEditable}
                     />
 
                     <label>Fecha etapa</label>
@@ -79,7 +82,7 @@ export default function ExpedientePage() {
                         type="date" 
                         name="fechaetapa"
                         value={expedienteData.fechaetapa || ''}
-                        onChange={handleExpedienteChange}
+                        readOnly // iii. No se puede modificar
                         disabled={!isFullEditable}
                     />
 
@@ -89,7 +92,7 @@ export default function ExpedientePage() {
                         name="nometapa"
                         placeholder="Nombre de la etapa" 
                         value={expedienteData.nometapa || ''}
-                        onChange={handleExpedienteChange}
+                        readOnly // iv. No se puede modificar
                         disabled={!isFullEditable}
                     />
 
@@ -109,38 +112,50 @@ export default function ExpedientePage() {
                 <div className="form-column">
 
                     <label>No Caso</label>
-                    {/* Input de búsqueda: Siempre habilitado si no está cargando */}
                     <input 
                         type="text" 
                         placeholder="Número de caso"
                         value={noCasoInput} 
                         onChange={(e) => setNoCasoInput(e.target.value)}
-                        onKeyDown={handleKeyDown} // Búsqueda al presionar Enter
-                        disabled={loading}
+                        onKeyDown={handleKeyDown}
+                        disabled={loading || isCreateModeActive} // No editable si se presionó Crear
                     />
 
                     <label>Abogado</label>
-                    <input 
-                        type="text" 
+                    {/* 🛑 v. Lista desplegable de Abogados 🛑 */}
+                    <select
                         name="nombre_abogado"
-                        placeholder="Abogado responsable" 
                         value={expedienteData.nombre_abogado || ''}
                         onChange={handleExpedienteChange}
                         disabled={!isFullEditable}
-                    />
+                    >
+                        <option value="">-- Seleccione un Abogado --</option>
+                        {abogadosList.map(abogado => (
+                            // La opción value debe ser lo que se guarda en EXPEDIENTE.CEDULA
+                            <option key={abogado.cedula} value={abogado.nombre_completo}> 
+                                {abogado.nombre_completo}
+                            </option>
+                        ))}
+                    </select>
 
                     <label>Ciudad</label>
-                    <input 
-                        type="text" 
+                    {/* 🛑 vi. Lista desplegable de Ciudades 🛑 */}
+                    <select
                         name="ciudad"
-                        placeholder="Ciudad" 
                         value={expedienteData.ciudad || ''}
                         onChange={handleExpedienteChange}
                         disabled={!isFullEditable}
-                    />
-
+                    >
+                        <option value="">-- Seleccione una Ciudad --</option>
+                        {lugaresList.map(lugar => (
+                            // La opción value debe ser lo que se guarda en EXPEDIENTE.CODLUGAR
+                            <option key={lugar.codlugar} value={lugar.nomlugar}> 
+                                {lugar.nomlugar}
+                            </option>
+                        ))}
+                    </select>
+                    
                     <label>Entidad</label>
-                    {/* ASUMIMOS que entidad también es editable si isFullEditable es TRUE */}
                     <input type="text" placeholder="Entidad" disabled={!isFullEditable} />
 
                     <label>Impugnación</label>
@@ -152,13 +167,12 @@ export default function ExpedientePage() {
                         onChange={handleExpedienteChange}
                         disabled={!isFullEditable}
                     />
-
+                    
                 </div>
             </div>
 
             {/* ======= SECCIÓN INFERIOR (3 columnas) ======= */}
             <div className="three-section">
-
                 {/* Suceso */}
                 <div className="three-column">
                     <label>Suceso</label>
@@ -188,8 +202,6 @@ export default function ExpedientePage() {
                 {/* Documentos */}
                 <div className="three-column">
                     <label>Documentos ({expedienteData.documentos.length})</label>
-
-                    {/* Mapea la lista de documentos (solo lectura) */}
                     {expedienteData.documentos.map((doc, index) => (
                         <div key={index} className="row-inline">
                             <input 
@@ -197,43 +209,26 @@ export default function ExpedientePage() {
                                 placeholder={doc.tipo_doc_nombre || `Documento ${index + 1}`}
                                 value={doc.nombre_doc || ''} 
                                 readOnly
-                                disabled={!isFullEditable} 
                             />
                             <span className="icon-doc">📄</span>
                         </div>
                     ))}
-                    
-                    {/* Placeholder si no hay documentos */}
-                    {expedienteData.documentos.length === 0 && (
-                         <div className="row-inline">
-                            <input type="text" placeholder={`Documento 1`} disabled={!isFullEditable} />
-                            <span className="icon-doc">📄</span>
-                        </div>
-                    )}
-
                     <button className="btn-secondary" disabled={!isFullEditable}>Imprimir 🖨️</button>
                 </div>
-
             </div>
 
             {/* ======= BOTONES DE NAVEGACIÓN Y GUARDAR ======= */}
             <div className="bottom-controls">
-
-                {/* Los botones de navegación no son funcionales por ahora */}
                 <button className="arrow-btn" disabled={true}>⬅️</button>
                 <button className="arrow-btn" disabled={true}>➡️</button>
-
-                {/* 🛑 BOTÓN GUARDAR 🛑 */}
                 <button 
                     className="btn-primary"
                     onClick={handleGuardarExpediente}
-                    // Deshabilitado por Regla A o si no se ha encontrado/creado un expediente.
                     disabled={isGuardarDisabled || loading} 
                 >
                     Guardar
                 </button>
             </div>
-
         </div>
     );
 }
