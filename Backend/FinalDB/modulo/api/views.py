@@ -5,8 +5,11 @@ from .db import run_query
 from .services.caso_service import (
     buscar_cliente_con_caso_activo,
     obtener_siguiente_no_caso,
-    obtener_especializaciones
+    obtener_especializaciones,
+    crear_nuevo_caso
 )
+
+import traceback
 
 # VISTAS GENERALES
 
@@ -139,3 +142,46 @@ class EspecializacionListView(APIView):
             return Response(especializaciones, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class GestionCasoCrearView(APIView):
+    """Vista para crear un nuevo caso."""
+    def post(self, request):
+        try:
+            data = request.data
+            cod_cliente = data.get('cod_cliente')
+            case_data = data # El frontend manda los datos del caso en el cuerpo, junto al cod_cliente
+            
+            # Llamar a la función del servicio
+            resultado = crear_nuevo_caso(cod_cliente, case_data)
+            
+            return Response(resultado, status=status.HTTP_201_CREATED)
+        
+        except Exception as e:
+            # Imprimir el error en la consola de Django para depuración
+            print(f"Error al crear caso: {e}") 
+            # Devolver un 500 con el mensaje de error
+            return Response({"error": f"Error interno al registrar el caso: {str(e)}"}, 
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class GestionCasoCrearView(APIView):
+    """Vista para crear un nuevo caso."""
+    def post(self, request):
+        try:
+            data = request.data
+            cod_cliente = data.get('cod_cliente')
+            
+            if not cod_cliente:
+                return Response({"error": "Falta el código de cliente (cod_cliente)."}, 
+                                status=status.HTTP_400_BAD_REQUEST)
+            
+            resultado = crear_nuevo_caso(cod_cliente, data)
+            
+            return Response(resultado, status=status.HTTP_201_CREATED)
+        
+        except Exception as e:
+            # Imprimir el error exacto en la consola de Django
+            traceback.print_exc() 
+            
+            # Devolver el error al frontend
+            return Response({"error": f"Error interno al registrar el caso: {str(e)}"}, 
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)

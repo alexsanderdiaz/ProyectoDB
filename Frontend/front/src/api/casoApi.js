@@ -55,18 +55,36 @@ export async function fetchEspecializaciones() {
 
 // Lógica de Creación (Próximo paso)
 export async function createNewCase(clienteId, caseData) {
-    const url = `${API_BASE_URL}gestion-caso/crear/`;
+    const url = `${API_BASE_URL}gestion-caso/crear/`; 
+
+    // ✅ Asegurar que el payload enviado coincida con lo que el backend espera.
+    // El backend espera 'cod_cliente' separado y los datos del caso.
+    const payload = { 
+        cod_cliente: clienteId,
+        nocaso: caseData.nocaso,
+        fechaInicio: caseData.fechaInicio,
+        // Usamos null si está vacío, el backend debe manejar esto
+        fechaFin: caseData.fechaFin || null, 
+        especializacion: caseData.especializacion,
+        // Asegurar que sea número y manejar valores vacíos/nulos
+        valor: parseFloat(caseData.valor) || 0, 
+    };
+
     const response = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ...caseData, cod_cliente: clienteId }),
+        body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-        throw new Error(`Error al crear caso: ${response.status}`);
+        // Lógica mejorada para capturar el mensaje de error del backend
+        const errorData = await response.json().catch(() => ({ 
+            error: 'Respuesta sin JSON o error desconocido.' 
+        }));
+        // El error 500 del backend debe devolver su propio mensaje de error
+        throw new Error(`Error al crear caso: ${response.status} - ${errorData.error || errorData.message}`);
     }
     return response.json();
 }
-

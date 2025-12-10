@@ -1,10 +1,11 @@
 // src/hooks/useCaso.jsx
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react"; 
 import { 
     fetchClienteConCasoActivo, 
     fetchSiguienteNoCaso,
-    fetchEspecializaciones 
+    fetchEspecializaciones,
+    createNewCase // IMPORTAR LA FUNCIÓN DE CREACIÓN
 } from "../api/casoApi"; 
 
 // Estado inicial para limpiar el formulario de caso
@@ -31,8 +32,11 @@ export function useCasoLogic() {
     const [clienteExiste, setClienteExiste] = useState(null);
     const [casoActivoExiste, setCasoActivoExiste] = useState(false);
     const [isCaseInputDisabled, setIsCaseInputDisabled] = useState(true);
+    // NUEVO ESTADO: Bandera para saber si estamos en modo "Crear Caso Nuevo"
+    const [isCreatingNewCase, setIsCreatingNewCase] = useState(false); 
 
-    // 🛑 EFECTO: Cargar las especializaciones
+
+    // EFECTO: Cargar las especializaciones
     useEffect(() => {
         async function loadEspecializaciones() {
             try {
@@ -45,9 +49,8 @@ export function useCasoLogic() {
         loadEspecializaciones();
     }, []); 
 
-    // 🛑 NUEVO HANDLER: Limpia el documento cuando el usuario escribe en Nombre/Apellido
+    // HANDLER: Limpia el documento cuando el usuario escribe en Nombre/Apellido
     const handleNombreApellidoChange = (name) => {
-        // La variable 'name' ahora es directamente el string del valor del input
         setNombreApellido(name); 
         
         // CORRECCIÓN: Limpieza de estados
@@ -55,11 +58,12 @@ export function useCasoLogic() {
         setClienteExiste(null);
         setCasoActivoExiste(false);
         setIsCaseInputDisabled(true);
+        setIsCreatingNewCase(false); // Salir de modo creación
         setCasoData(initialCasoData);
         setListaCasosActivos([]);
     };
     
-    // Handler para el campo de documento (si estuviera habilitado)
+    // Handler para el campo de documento 
     const handleDocChange = (e) => {
         const doc = e.target.value;
         setClienteDoc(doc);
@@ -69,6 +73,7 @@ export function useCasoLogic() {
         setClienteExiste(null);
         setCasoActivoExiste(false);
         setIsCaseInputDisabled(true);
+        setIsCreatingNewCase(false); // Salir de modo creación
         setCasoData(initialCasoData);
         setListaCasosActivos([]);
     };
@@ -76,15 +81,10 @@ export function useCasoLogic() {
     // 5. LÓGICA DE BÚSQUEDA (handleSearch)
     const handleSearch = useCallback(async () => {
         
-        // La limpieza inicial ya está en handleNombreApellidoChange y handleDocChange
-        
         let nombreBusqueda = undefined;
         let apellidoBusqueda = undefined;
-        
-        // busquedaDocumento ahora será undefined si el usuario escribió en Nombre/Apellido
         let busquedaDocumento = clienteDoc.trim() || undefined; 
         
-        // Si NO hay documento (se limpió), intentamos buscar por nombre/apellido
         if (!busquedaDocumento) { 
             const tokens = nombreApellido.trim().split(/\s+/).filter(Boolean);
 
@@ -102,13 +102,10 @@ export function useCasoLogic() {
 
             if (data && data.encontrado) { 
                 setClienteExiste(true);
-                
-                // Actualizar los campos con la data nueva
-                setClienteDoc(data.cliente.documento || ''); // Se vuelve a llenar el documento
+                setClienteDoc(data.cliente.documento || ''); 
                 setNombreApellido(`${data.cliente.nombre || ''} ${data.cliente.apellido || ''}`.trim()); 
                 setClienteCod(data.cliente.cod_cliente); 
 
-                // ... (el resto de la lógica de casos activos) ...
                 if (data.casos_activos && data.casos_activos.length > 0) {
                     setListaCasosActivos(data.casos_activos);
                     setCasoActivoExiste(true);
@@ -123,6 +120,7 @@ export function useCasoLogic() {
                         valor: ultimoCaso.valor
                     });
                     setIsCaseInputDisabled(true);
+                    setIsCreatingNewCase(false); // No estamos creando
                 } else {
                     setCasoActivoExiste(false);
                     setListaCasosActivos([]);
@@ -131,7 +129,7 @@ export function useCasoLogic() {
                 const crearNuevo = window.confirm(
                     (data && data.mensaje) || "Cliente no encontrado. ¿Desea crear un nuevo cliente?"
                 );
-                // ... (lógica de cliente no encontrado) ...
+
                 if (crearNuevo) {
                     setClienteExiste(false);
                     setClienteDoc(busquedaDocumento || ''); 
@@ -158,10 +156,8 @@ export function useCasoLogic() {
         
     }, [nombreApellido, clienteDoc]); 
 
-    // ... (handleSelectCaso, handleCrearCaso, handleCasoChange) ...
-
+    // Lógica para seleccionar un caso activo de la lista desplegable
     const handleSelectCaso = useCallback((numeroCaso) => {
-        // ... (código existente) ...
         const casoSeleccionado = listaCasosActivos.find(c => String(c.numero_caso) === String(numeroCaso));
         
         if (casoSeleccionado) {
@@ -174,9 +170,11 @@ export function useCasoLogic() {
             });
             setIsCaseInputDisabled(true); 
             setCasoActivoExiste(true); 
+            setIsCreatingNewCase(false); // No estamos creando
         }
     }, [listaCasosActivos]);
 
+    // Lógica para inicializar la creación de un nuevo caso
     const handleCrearCaso = useCallback(async () => {
         
         if (!clienteCod) {
@@ -196,6 +194,7 @@ export function useCasoLogic() {
             });
             setIsCaseInputDisabled(false); 
             setCasoActivoExiste(false); 
+            setIsCreatingNewCase(true); // Habilitar modo creación
 
         } catch (error) {
             console.error("Error al obtener el número de caso consecutivo:", error);
@@ -203,9 +202,68 @@ export function useCasoLogic() {
         }
     }, [clienteCod]); 
 
+    // Handler genérico para cambios en los inputs del caso
     const handleCasoChange = (e) => {
         setCasoData({ ...casoData, [e.target.name]: e.target.value });
     };
+
+
+    // LÓGICA DE VALIDACIÓN DEL BOTÓN GUARDAR
+    const isSaveButtonDisabled = useMemo(() => {
+        // El botón Guardar está deshabilitado si NO estamos creando un caso nuevo
+        if (!isCreatingNewCase) {
+            return true;
+        }
+        
+        // Validaciones obligatorias
+        const { nocaso, fechaInicio, especializacion, valor } = casoData;
+        const valorNumerico = parseFloat(valor);
+        
+        return (
+            !nocaso || 
+            !fechaInicio || 
+            !especializacion || 
+            !valor || 
+            isNaN(valorNumerico) ||
+            valorNumerico <= 0
+        );
+
+    }, [isCreatingNewCase, casoData]);
+
+
+    // FUNCIÓN: Guardar el nuevo caso
+    const handleGuardarCaso = useCallback(async () => {
+        if (isSaveButtonDisabled || !clienteCod) {
+            alert("Rellene todos los campos obligatorios (Especialización y Valor > 0) antes de guardar.");
+            return;
+        }
+
+        try {
+            const resultado = await createNewCase(clienteCod, casoData);
+            
+            alert(`Caso ${resultado.nocaso} registrado con éxito.`);
+
+            // Limpiar modo creación y deshabilitar inputs
+            setIsCreatingNewCase(false);
+            setIsCaseInputDisabled(true); 
+            
+            // Opcional: Podríamos llamar a handleSearch() para recargar la lista de casos activos
+
+        } catch (error) {
+            console.error("Error al guardar el caso:", error);
+            alert(`Fallo al registrar caso: ${error.message}`);
+        }
+    }, [isSaveButtonDisabled, clienteCod, casoData]);
+
+
+    // FUNCIÓN: Handler para el botón Acuerdo de Pago
+    const handleAcuerdoPago = useCallback(() => {
+        if (window.confirm("¿Desea incluir un acuerdo de pago para este caso?")) {
+            console.log("Acuerdo de pago aceptado por el usuario.");
+        } else {
+            console.log("Acuerdo de pago cancelado por el usuario.");
+        }
+    }, []);
 
 
     // 6. DEVOLVER TODOS LOS ESTADOS Y FUNCIONES QUE EL COMPONENTE NECESITA
@@ -222,7 +280,10 @@ export function useCasoLogic() {
         handleSearch,
         handleCrearCaso,
         handleSelectCaso,
-        isCaseInputDisabled,
         handleCasoChange,
+        handleGuardarCaso, 
+        handleAcuerdoPago, 
+        isCaseInputDisabled,
+        isSaveButtonDisabled, 
     };
 }
