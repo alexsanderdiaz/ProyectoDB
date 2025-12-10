@@ -1,47 +1,43 @@
 // src/pages/ExpedientePage.jsx
 
 import React from "react";
-import { useExpedienteLogic } from "../hooks/useExpediente"; 
 import "../styles/Pages.css";
+import { useExpedienteLogic } from "../hooks/useExpedienteLogic"; 
 
 export default function ExpedientePage() {
-
-    // 🛑 Usamos el hook
     const {
-        nocasoInput,
-        handleNocasoInputChange,
-        handleClickSearch, // Función de búsqueda (se llama con Enter)
+        noCasoInput,
+        setNoCasoInput,
         expedienteData,
-        expedienteEncontrado,
-        isLoading,
+        loading,
         error,
+        handleKeyDown,
+        handleExpedienteChange,
         handleGuardarExpediente,
         handleCrearExpediente,
-    } = useExpedienteLogic();
+        isCaseFound,
+        isCaseClosed,
+        isCreateModeInitial,
+        isFullEditable,      // Controla si los campos son editables
+        isGuardarDisabled,
+    } = useExpedienteLogic(); 
 
-    // Control para deshabilitar campos de datos si no hay expediente encontrado o estamos cargando
-    // Se habilita si expedienteEncontrado es true o si se está en modo creación (idexpediente === 'NUEVO')
-    const isDataInputDisabled = !expedienteEncontrado && expedienteData.idexpediente !== 'NUEVO';
-    
-    // Función para manejar la tecla Enter en el input de No Caso
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            handleClickSearch(); // Llama a la función de búsqueda del hook
-        }
-    };
-    
+    // Determina si se debe mostrar un mensaje de 'No Encontrado'
+    const caseNotFound = error && !isCaseFound && !isCreateModeInitial && !loading;
+
     return (
         <div className="page-container">
             
             {/* ======= MENSAJES DE ESTADO ======= */}
-            {(error || expedienteEncontrado !== null) && (
-                <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: error ? '#fdd' : (expedienteEncontrado ? '#dfd' : '#eee'), border: `1px solid ${error ? 'red' : (expedienteEncontrado ? 'green' : '#ccc')}` }}>
-                    {isLoading && <p>Cargando expediente...</p>}
-                    {error && <p className="error-message">Error: {error}</p>}
-                    {expedienteEncontrado === true && <p className="success-message">Expediente {expedienteData.idexpediente} encontrado para el Caso {expedienteData.nocaso}.</p>}
-                    {expedienteEncontrado === false && !error && expedienteData.nocaso && <p>No se encontró expediente para el caso {expedienteData.nocaso}. Presione 'Crear' para registrar uno.</p>}
-                </div>
-            )}
+            {loading && <div className="loading">Cargando expediente...</div>}
+            {caseNotFound && <div className="error">{error}</div>}
+            
+            {/* Mensajes de modo (Reglas A, B, C) */}
+            {isCaseClosed && <div className="info">Caso Cerrado. Solo Modo Lectura .</div>}
+            {isCreateModeInitial && <div className="warning">Caso {expedienteData.nocaso} NO encontrado. Debe registrar un caso con ese ID.</div>}
+            {isFullEditable && !isCaseClosed && expedienteData.idexpediente !== 'NUEVO' && <div className="success">Caso Abierto. Se permite Actualizar.</div>}
+            {expedienteData.idexpediente === 'NUEVO' && <div className="warning">Modo Creación Activo. Rellene los campos y Guarde.</div>}
+
 
             {/* ======= SECCIÓN SUPERIOR (2 COLUMNAS) ======= */}
             <div className="form-section">
@@ -53,16 +49,16 @@ export default function ExpedientePage() {
                     <div className="row-inline">
                         <input 
                             type="text" 
-                            placeholder="Número de expediente"
-                            value={expedienteData.idexpediente}
-                            readOnly
-                            disabled={isDataInputDisabled}
+                            placeholder="Número de expediente" 
+                            value={expedienteData.idexpediente || ''}
+                            readOnly 
                         />
+                        {/* 🛑 BOTÓN CREAR (Habilitado solo en modo 'isCreateModeInitial') 🛑 */}
                         <button 
                             className="btn-secondary"
                             onClick={handleCrearExpediente}
-                            // Habilitar Crear solo si hay un NoCaso ingresado y NO hay un expediente encontrado
-                            disabled={!nocasoInput || expedienteEncontrado}
+                            // Habilitado si se debe iniciar el modo creación (Regla C)
+                            disabled={!isCreateModeInitial || expedienteData.idexpediente === 'NUEVO'}
                         >
                             Crear
                         </button>
@@ -71,36 +67,40 @@ export default function ExpedientePage() {
                     <label>No. Etapa</label>
                     <input 
                         type="text" 
+                        name="noetapa"
                         placeholder="Número de etapa" 
-                        value={expedienteData.noetapa}
-                        readOnly
-                        disabled={isDataInputDisabled}
+                        value={expedienteData.noetapa || ''}
+                        onChange={handleExpedienteChange}
+                        disabled={!isFullEditable} // Aplica Reglas A y C inicial
                     />
 
                     <label>Fecha etapa</label>
                     <input 
                         type="date" 
-                        value={expedienteData.fechaetapa}
-                        readOnly
-                        disabled={isDataInputDisabled}
+                        name="fechaetapa"
+                        value={expedienteData.fechaetapa || ''}
+                        onChange={handleExpedienteChange}
+                        disabled={!isFullEditable}
                     />
 
                     <label>Nombre Etapa</label>
                     <input 
                         type="text" 
+                        name="nometapa"
                         placeholder="Nombre de la etapa" 
-                        value={expedienteData.nometapa}
-                        readOnly
-                        disabled={isDataInputDisabled}
+                        value={expedienteData.nometapa || ''}
+                        onChange={handleExpedienteChange}
+                        disabled={!isFullEditable}
                     />
 
                     <label>Instancia</label>
                     <input 
                         type="text" 
+                        name="nominstancia"
                         placeholder="Instancia" 
-                        value={expedienteData.nominstancia}
-                        readOnly
-                        disabled={isDataInputDisabled}
+                        value={expedienteData.nominstancia || ''}
+                        onChange={handleExpedienteChange}
+                        disabled={!isFullEditable}
                     />
 
                 </div>
@@ -109,44 +109,48 @@ export default function ExpedientePage() {
                 <div className="form-column">
 
                     <label>No Caso</label>
-                    {/* 🛑 AQUÍ SE CONECTA EL INPUT PARA CONSULTA Y DATOS 🛑 */}
+                    {/* Input de búsqueda: Siempre habilitado si no está cargando */}
                     <input 
                         type="text" 
                         placeholder="Número de caso"
-                        value={nocasoInput}
-                        onChange={handleNocasoInputChange}
+                        value={noCasoInput} 
+                        onChange={(e) => setNoCasoInput(e.target.value)}
                         onKeyDown={handleKeyDown} // Búsqueda al presionar Enter
-                        disabled={isLoading}
+                        disabled={loading}
                     />
 
                     <label>Abogado</label>
                     <input 
                         type="text" 
+                        name="nombre_abogado"
                         placeholder="Abogado responsable" 
-                        value={expedienteData.nombre_abogado}
-                        readOnly
-                        disabled={isDataInputDisabled}
+                        value={expedienteData.nombre_abogado || ''}
+                        onChange={handleExpedienteChange}
+                        disabled={!isFullEditable}
                     />
 
                     <label>Ciudad</label>
                     <input 
                         type="text" 
+                        name="ciudad"
                         placeholder="Ciudad" 
-                        value={expedienteData.ciudad}
-                        readOnly
-                        disabled={isDataInputDisabled}
+                        value={expedienteData.ciudad || ''}
+                        onChange={handleExpedienteChange}
+                        disabled={!isFullEditable}
                     />
 
                     <label>Entidad</label>
-                    <input type="text" placeholder="Entidad" readOnly disabled={isDataInputDisabled} />
+                    {/* ASUMIMOS que entidad también es editable si isFullEditable es TRUE */}
+                    <input type="text" placeholder="Entidad" disabled={!isFullEditable} />
 
                     <label>Impugnación</label>
                     <input 
                         type="text" 
+                        name="nombre_impugnacion"
                         placeholder="Impugnación" 
-                        value={expedienteData.nombre_impugnacion}
-                        readOnly
-                        disabled={isDataInputDisabled}
+                        value={expedienteData.nombre_impugnacion || ''}
+                        onChange={handleExpedienteChange}
+                        disabled={!isFullEditable}
                     />
 
                 </div>
@@ -160,10 +164,11 @@ export default function ExpedientePage() {
                     <label>Suceso</label>
                     <textarea 
                         rows="10" 
+                        name="suceso"
                         placeholder="Descripción del suceso"
-                        value={expedienteData.suceso}
-                        readOnly
-                        disabled={isDataInputDisabled}
+                        value={expedienteData.suceso || ''}
+                        onChange={handleExpedienteChange}
+                        disabled={!isFullEditable}
                     ></textarea>
                 </div>
 
@@ -172,10 +177,11 @@ export default function ExpedientePage() {
                     <label>Resultado</label>
                     <textarea 
                         rows="10" 
+                        name="resultado"
                         placeholder="Resultado del caso"
-                        value={expedienteData.resultado}
-                        readOnly
-                        disabled={isDataInputDisabled}
+                        value={expedienteData.resultado || ''}
+                        onChange={handleExpedienteChange}
+                        disabled={!isFullEditable}
                     ></textarea>
                 </div>
 
@@ -183,29 +189,29 @@ export default function ExpedientePage() {
                 <div className="three-column">
                     <label>Documentos ({expedienteData.documentos.length})</label>
 
-                    {/* Mapea la lista de documentos obtenida del hook */}
+                    {/* Mapea la lista de documentos (solo lectura) */}
                     {expedienteData.documentos.map((doc, index) => (
                         <div key={index} className="row-inline">
                             <input 
                                 type="text" 
                                 placeholder={doc.tipo_doc_nombre || `Documento ${index + 1}`}
-                                value={doc.nombre_doc} 
+                                value={doc.nombre_doc || ''} 
                                 readOnly
-                                disabled={isDataInputDisabled} 
+                                disabled={!isFullEditable} 
                             />
                             <span className="icon-doc">📄</span>
                         </div>
                     ))}
                     
-                    {/* Placeholder para mostrar al menos un campo si no hay documentos o está deshabilitado */}
+                    {/* Placeholder si no hay documentos */}
                     {expedienteData.documentos.length === 0 && (
                          <div className="row-inline">
-                            <input type="text" placeholder={`Documento 1`} disabled={isDataInputDisabled} />
+                            <input type="text" placeholder={`Documento 1`} disabled={!isFullEditable} />
                             <span className="icon-doc">📄</span>
                         </div>
                     )}
 
-                    <button className="btn-secondary" disabled={isDataInputDisabled}>Imprimir 🖨️</button>
+                    <button className="btn-secondary" disabled={!isFullEditable}>Imprimir 🖨️</button>
                 </div>
 
             </div>
@@ -213,13 +219,16 @@ export default function ExpedientePage() {
             {/* ======= BOTONES DE NAVEGACIÓN Y GUARDAR ======= */}
             <div className="bottom-controls">
 
+                {/* Los botones de navegación no son funcionales por ahora */}
                 <button className="arrow-btn" disabled={true}>⬅️</button>
                 <button className="arrow-btn" disabled={true}>➡️</button>
 
+                {/* 🛑 BOTÓN GUARDAR 🛑 */}
                 <button 
                     className="btn-primary"
                     onClick={handleGuardarExpediente}
-                    disabled={isDataInputDisabled}
+                    // Deshabilitado por Regla A o si no se ha encontrado/creado un expediente.
+                    disabled={isGuardarDisabled || loading} 
                 >
                     Guardar
                 </button>

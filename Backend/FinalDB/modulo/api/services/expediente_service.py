@@ -4,13 +4,13 @@ from ..db import run_query
 
 def buscar_expediente_por_nocaso(nocaso):
     """
-    Busca la información principal del expediente dado un número de caso (NOCASO).
-    *** TEMPORALMENTE: Se omiten Suceso, Resultado y Documentos. ***
+    Busca la información principal del expediente y la FECHAFIN del caso asociado.
+    Se omiten temporalmente Suceso, Resultado y Documentos.
     """
     if not nocaso:
         return {"encontrado": False, "mensaje": "Número de caso (NoCaso) es obligatorio."}
 
-    # 1. Consulta Principal del Expediente (Verificada y Correcta)
+    # 1. Consulta Principal del Expediente (INCLUYE C.FECHAFIN)
     sql_expediente = """
         SELECT
             E.CONSECEXPE AS IDEXPEDIENTE,
@@ -21,9 +21,12 @@ def buscar_expediente_por_nocaso(nocaso):
             L.NOMLUGAR AS CIUDAD,
             EP.NOMETAPA,
             I.NINSTANCIA AS NOMINSTANCIA,
-            IM.NOMIMPUGNA AS NOMBRE_IMPUGNACION
+            IM.NOMIMPUGNA AS NOMBRE_IMPUGNACION,
+            TO_CHAR(C.FECHAFIN, 'YYYY-MM-DD') AS FECHAFIN_CASO
         FROM
             EXPEDIENTE E
+        LEFT JOIN
+            CASO C ON E.NOCASO = C.NOCASO -- 🛑 NUEVA UNIÓN
         LEFT JOIN
             ABOGADO A ON E.CEDULA = A.CEDULA
         LEFT JOIN
@@ -46,7 +49,7 @@ def buscar_expediente_por_nocaso(nocaso):
     expediente_data = run_query(sql_expediente, params, fetch="one")
 
     if not expediente_data:
-        # Se maneja el caso de expediente no encontrado.
+        # Se maneja el caso de expediente no encontrado (Regla C inicial)
         return {"encontrado": False, "mensaje": f"No se encontró un expediente para el NoCaso: {nocaso}."}
 
     # 2. Devolver los datos principales, y añadimos campos vacíos para no romper el frontend
