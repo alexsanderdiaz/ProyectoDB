@@ -23,8 +23,11 @@ urlpatterns = [
     path("tipodocumento/", TipodocumentoView.as_view()),
     path("tipolugar/", TipolugarView.as_view()),
     
+    # Rutas de Gestión de Caso
     path("gestion-caso/buscar-cliente/", GestionCasoBusquedaView.as_view()),
     path('gestion-caso/siguiente-nocaso/', GestionCasoSiguienteNoCasoView.as_view()),
     path('datos-auxiliares/especializaciones/', EspecializacionListView.as_view()),
     path('gestion-caso/crear/', GestionCasoCrearView.as_view()),
+
+    path("gestion-expediente/buscar/", GestionExpedienteBusquedaView.as_view()),
 ]
