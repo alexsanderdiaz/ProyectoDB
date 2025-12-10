@@ -1,8 +1,8 @@
 // src/pages/ExpedientePage.jsx
 
 import React from "react";
-import "../styles/Pages.css";
-import { useExpedienteLogic } from "../hooks/useExpedienteLogic"; 
+import "../styles/Pages.css"; // Archivo de estilos
+import { useExpedienteLogic } from "../hooks/useExpedienteLogic"; // El hook que contiene toda la lógica
 
 export default function ExpedientePage() {
     const {
@@ -14,18 +14,21 @@ export default function ExpedientePage() {
         handleKeyDown,
         handleExpedienteChange,
         handleGuardarExpediente,
-        handleCrearExpediente,
-        abogadosList,
-        lugaresList,
+        handleCrearExpediente, // Handler para el botón Crear
+        abogadosList, // Lista de abogados para el select
+        lugaresList, // Lista de lugares para el select
         isCaseFound,
         isCaseClosed,
-        isCreateModeInitial,
-        isCreateModeActive, 
-        isFullEditable,
+        isCreateModeInitial, // Regla C (Botón Crear visible)
+        isCreateModeActive,  // Regla D (Modo Creación Activo)
+        isFullEditable,      // Regla B o D (Habilita la edición)
         isGuardarDisabled,
     } = useExpedienteLogic(); 
 
     const caseNotFound = error && !isCaseFound && !isCreateModeInitial && !isCreateModeActive && !loading;
+    
+    // Determinar si los campos de búsqueda están bloqueados
+    const isSearchDisabled = loading || isCreateModeActive;
 
     return (
         <div className="page-container">
@@ -34,9 +37,9 @@ export default function ExpedientePage() {
             {loading && <div className="loading">Cargando datos...</div>}
             {caseNotFound && <div className="error">{error}</div>}
             
-            {/* Mensajes de modo (Reglas A, B, C, D) */}
+            {/* Mensajes de modo (Labels de estado: A, B, C, D) */}
             {isCaseClosed && <div className="info">Caso Cerrado. Solo Modo Lectura.</div>}
-            {isCreateModeInitial && <div className="warning">Caso {expedienteData.nocaso} NO encontrado. Presione 'Crear'.</div>}
+            {isCreateModeInitial && <div className="warning">Caso **{expedienteData.nocaso}** NO encontrado. Presione 'Crear' para registrar un nuevo expediente.</div>}
             {isCreateModeActive && <div className="warning">Modo Creación Activo. Complete los campos y Guarde.</div>}
             {isCaseFound && !isCaseClosed && <div className="success">Caso Abierto. Se permite Actualizar.</div>}
 
@@ -53,9 +56,9 @@ export default function ExpedientePage() {
                             type="text" 
                             placeholder="Número de expediente" 
                             value={expedienteData.idexpediente || ''}
-                            readOnly // i. No se puede modificar
+                            readOnly // D.i. No se puede modificar (Solo lectura)
                         />
-                        {/* 🛑 BOTÓN CREAR (Aparece solo en modo isCreateModeInitial) 🛑 */}
+                        {/* BOTÓN CREAR (Aparece solo en modo isCreateModeInitial - Regla C) */}
                         {isCreateModeInitial && (
                             <button 
                                 className="btn-secondary"
@@ -73,7 +76,7 @@ export default function ExpedientePage() {
                         name="noetapa"
                         placeholder="Número de etapa" 
                         value={expedienteData.noetapa || ''}
-                        readOnly // ii. No se puede modificar
+                        readOnly // D.ii. No se puede modificar (Solo lectura)
                         disabled={!isFullEditable}
                     />
 
@@ -82,7 +85,7 @@ export default function ExpedientePage() {
                         type="date" 
                         name="fechaetapa"
                         value={expedienteData.fechaetapa || ''}
-                        readOnly // iii. No se puede modificar
+                        readOnly // D.iii. No se puede modificar (Solo lectura)
                         disabled={!isFullEditable}
                     />
 
@@ -92,7 +95,7 @@ export default function ExpedientePage() {
                         name="nometapa"
                         placeholder="Nombre de la etapa" 
                         value={expedienteData.nometapa || ''}
-                        readOnly // iv. No se puede modificar
+                        readOnly // D.iv. No se puede modificar (Solo lectura)
                         disabled={!isFullEditable}
                     />
 
@@ -118,38 +121,36 @@ export default function ExpedientePage() {
                         value={noCasoInput} 
                         onChange={(e) => setNoCasoInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        disabled={loading || isCreateModeActive} // No editable si se presionó Crear
+                        disabled={isSearchDisabled} // Deshabilitado si estamos cargando o en modo 'Creación Activa'
                     />
 
                     <label>Abogado</label>
-                    {/* 🛑 v. Lista desplegable de Abogados 🛑 */}
+                    {/* D.v. Lista desplegable de Abogados */}
                     <select
-                        name="nombre_abogado"
-                        value={expedienteData.nombre_abogado || ''}
+                        name="cedula_abogado" // CLAVE: Usa la Cédula para el cambio
+                        value={expedienteData.cedula_abogado || ''} // CLAVE: El valor es la CEDULA
                         onChange={handleExpedienteChange}
                         disabled={!isFullEditable}
                     >
                         <option value="">-- Seleccione un Abogado --</option>
                         {abogadosList.map(abogado => (
-                            // La opción value debe ser lo que se guarda en EXPEDIENTE.CEDULA
-                            <option key={abogado.cedula} value={abogado.nombre_completo}> 
+                            <option key={abogado.cedula} value={abogado.cedula}>
                                 {abogado.nombre_completo}
                             </option>
                         ))}
                     </select>
 
                     <label>Ciudad</label>
-                    {/* 🛑 vi. Lista desplegable de Ciudades 🛑 */}
+                    {/* D.vi. Lista desplegable de Ciudades */}
                     <select
-                        name="ciudad"
-                        value={expedienteData.ciudad || ''}
+                        name="codlugar" // CLAVE: Usa el CodLugar para el cambio
+                        value={expedienteData.codlugar || ''} // CLAVE: El valor es el CODLUGAR
                         onChange={handleExpedienteChange}
                         disabled={!isFullEditable}
                     >
                         <option value="">-- Seleccione una Ciudad --</option>
                         {lugaresList.map(lugar => (
-                            // La opción value debe ser lo que se guarda en EXPEDIENTE.CODLUGAR
-                            <option key={lugar.codlugar} value={lugar.nomlugar}> 
+                            <option key={lugar.codlugar} value={lugar.codlugar}>
                                 {lugar.nomlugar}
                             </option>
                         ))}

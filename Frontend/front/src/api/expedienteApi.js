@@ -2,54 +2,92 @@
 
 const API_BASE_URL = "http://localhost:8000/api/"; 
 
-// Función de búsqueda existente (debe devolver fechafin_caso)
+// 1. BÚSQUEDA (Reglas A, B, C)
 export async function fetchExpedientePorNoCaso(nocaso) {
     const url = `${API_BASE_URL}gestion-expediente/buscar/?nocaso=${nocaso}`;
     const response = await fetch(url);
+    
+    // El backend devuelve 404 si no encuentra el EXPEDIENTE (Regla C)
     if (response.status === 404) {
-        return { encontrado: false, mensaje: `No se encontró un expediente para el NoCaso: ${nocaso}.` };
+        const errorData = await response.json().catch(() => ({}));
+        // El backend devuelve CODESPECIALIZACION si el CASO existe.
+        return { 
+            encontrado: false, 
+            mensaje: errorData.mensaje,
+            codespecializacion: errorData.codespecializacion || null
+        };
     }
     if (!response.ok) {
-        throw new Error(`Error en la búsqueda del expediente: ${response.status}`);
+        throw new Error(`Error ${response.status} en la búsqueda del expediente.`);
     }
     return response.json();
 }
 
-// 🛑 FUNCIONES SIMULADAS PARA LA REGLA D (DEBEN SER IMPLEMENTADAS EN EL BACKEND) 🛑
+// 2. DATOS INICIALES (Regla D)
 
-// D i: Obtiene el siguiente consecutivo de EXPEDIENTE
 export async function fetchSiguienteIdExpediente() {
-    console.log("SIMULACIÓN: Llamando a fetchSiguienteIdExpediente...");
-    return Math.floor(Math.random() * 100000) + 100; // Simula un ID
+    const url = `${API_BASE_URL}gestion-expediente/datos-creacion/siguiente-id/`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Error al obtener consecutivo de expediente: ${response.status}`);
+    }
+    return (await response.json()).idexpediente;
 }
 
-// D iv: Obtiene la primera etapa para la especialización del caso
 export async function fetchPrimeraEtapa(codEspecialidad) {
-    console.log(`SIMULACIÓN: Llamando a fetchPrimeraEtapa para ${codEspecialidad}...`);
-    // En un caso real, esto consultaría ESPECIA_ETAPA y ETAPAPROCESAL con PASOETAPA=1
-    return { 
-        noetapa: 1, 
-        nometapa: 'Inicio de Proceso / Análisis Inicial' 
-    }; 
+    const url = `${API_BASE_URL}gestion-expediente/datos-creacion/primera-etapa/?codespecializacion=${codEspecialidad}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Error al obtener la primera etapa: ${response.status}`);
+    }
+    return response.json();
 }
 
-// D v: Obtiene abogados por especialidad
 export async function fetchAbogadosPorEspecialidad(codEspecialidad) {
-    console.log(`SIMULACIÓN: Llamando a fetchAbogadosPorEspecialidad para ${codEspecialidad}...`);
-    // En un caso real, esto consultaría ABOGADO y ABOGA_ESPECIA
-    return [ 
-        { cedula: '111', nombre_completo: 'Laura Méndez (Especialista)' },
-        { cedula: '222', nombre_completo: 'Roberto Castillo (Especialista)' },
-    ];
+    const url = `${API_BASE_URL}gestion-expediente/datos-creacion/abogados/?codespecializacion=${codEspecialidad}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Error al obtener abogados: ${response.status}`);
+    }
+    return response.json();
 }
 
-// D vi: Obtiene la lista de lugares
 export async function fetchLugares() {
-    console.log("SIMULACIÓN: Llamando a fetchLugares...");
-    return [ 
-        { codlugar: 'BOG', nomlugar: 'Bogotá' },
-        { codlugar: 'MED', nomlugar: 'Medellín' },
-        { codlugar: 'CAL', nomlugar: 'Cali' },
-        { codlugar: 'BAR', nomlugar: 'Barranquilla' },
-    ];
+    const url = `${API_BASE_URL}gestion-expediente/datos-creacion/lugares/`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Error al obtener lugares: ${response.status}`);
+    }
+    return response.json();
+}
+
+// 3. CREAR/ACTUALIZAR EXPEDIENTE (Reglas D y B)
+export async function createNewExpediente(data) {
+    const url = `${API_BASE_URL}gestion-expediente/manipular/`;
+    const response = await fetch(url, {
+        method: 'POST', // Usamos POST para CREAR (Regla D)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Error desconocido.' }));
+        throw new Error(errorData.error || `Error ${response.status} al crear expediente.`);
+    }
+    return response.json();
+}
+
+export async function updateExistingExpediente(data) {
+    const url = `${API_BASE_URL}gestion-expediente/manipular/`;
+    const response = await fetch(url, {
+        method: 'PUT', // Usamos PUT para ACTUALIZAR (Regla B)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Error desconocido.' }));
+        throw new Error(errorData.error || `Error ${response.status} al actualizar expediente.`);
+    }
+    return response.json();
 }

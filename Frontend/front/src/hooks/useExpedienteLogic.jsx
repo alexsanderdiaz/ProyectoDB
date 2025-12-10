@@ -6,39 +6,74 @@ import {
     fetchSiguienteIdExpediente,
     fetchAbogadosPorEspecialidad,
     fetchLugares,
-    fetchPrimeraEtapa 
+    fetchPrimeraEtapa,
+    createNewExpediente,
+    updateExistingExpediente 
 } from '../api/expedienteApi'; 
 
-// Estado inicial del formulario del expediente
+// Estado inicial actualizado
 const initialExpedienteData = {
-    idexpediente: '', // CONSECEXPE
+    idexpediente: '', 
     nocaso: '',
     noetapa: '',
     fechaetapa: '',
-    nombre_abogado: '',
-    ciudad: '',
+    cedula_abogado: '', 
+    nombre_abogado: '', 
+    codlugar: '',     
+    ciudad: '',       
     nometapa: '',
     nominstancia: '',
     nombre_impugnacion: '',
     suceso: '',
     resultado: '',
     documentos: [],
-    fechafin_caso: null, // Clave para Reglas A y B
-    codespecializacion: null, // Necesario para buscar Abogados/Etapas
-    isNewCase: false, // Flag para el modo de creación activo
+    fechafin_caso: null, 
+    codespecializacion: null, 
+    isNewCase: false, 
 };
 
 export function useExpedienteLogic() {
+    // 1. ESTADOS (STATES)
     const [noCasoInput, setNoCasoInput] = useState('');
     const [expedienteData, setExpedienteData] = useState(initialExpedienteData);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    
-    // Estados para las listas desplegables
     const [abogadosList, setAbogadosList] = useState([]);
     const [lugaresList, setLugaresList] = useState([]);
 
-    // 1. LÓGICA DE BÚSQUEDA
+    
+    // 2. LÓGICA DE REGLAS A, B, C, D (useMemo) -> MOVIDO AQUÍ PARA DEFINIR PRIMERO
+    const { 
+        isCaseFound, 
+        isCaseClosed, 
+        isCreateModeInitial, 
+        isCreateModeActive, 
+        isFullEditable,      
+        isGuardarDisabled 
+    } = useMemo(() => {
+        const found = !!expedienteData.idexpediente && !expedienteData.isNewCase;
+        const closed = found && !!expedienteData.fechafin_caso; 
+        
+        // isCreateModeInitial: Caso no encontrado, hay NoCaso, no está cargando, Y se tiene la codespecializacion
+        const createInitial = !found && !!noCasoInput && expedienteData.nocaso === noCasoInput && !loading && !!expedienteData.codespecializacion; 
+        
+        const createActive = expedienteData.isNewCase; 
+        const editable = (found && !closed) || createActive; 
+        const guardarDisabled = closed || !editable; 
+
+        return { 
+            isCaseFound: found,
+            isCaseClosed: closed, 
+            isCreateModeInitial: createInitial,
+            isCreateModeActive: createActive,
+            isInputsDisabled: closed || createInitial,
+            isFullEditable: editable,
+            isGuardarDisabled: guardarDisabled,
+        };
+    }, [expedienteData, noCasoInput, loading]);
+
+
+    // 3. LÓGICA DE BÚSQUEDA (Depende de Estados, pero no de la salida del useMemo)
     const handleSearch = useCallback(async (nocaso) => {
         if (!nocaso) {
             setError("Por favor, ingrese un número de caso.");
@@ -48,7 +83,6 @@ export function useExpedienteLogic() {
 
         setLoading(true);
         setError(null);
-        // Limpiamos los datos del expediente, pero mantenemos el NoCasoInput
         setExpedienteData({...initialExpedienteData, nocaso: nocaso}); 
 
         try {
@@ -56,20 +90,13 @@ export function useExpedienteLogic() {
 
             if (data.encontrado) {
                 // Caso Existente (Reglas A o B)
-                
-                // 🛑 NECESITAS EL CODIGO DE ESPECIALIZACION DEL CASO PADRE 🛑
-                // Asumiremos que el backend lo devuelve, si no, hay que añadirlo a la consulta.
-                const codEspecialidad = data.codespecializacion || 'LAB'; 
-                
-                // Cargar listas si es un caso existente que se puede editar (Regla B)
                 if (!data.fechafin_caso) {
-                    setAbogadosList(await fetchAbogadosPorEspecialidad(codEspecialidad));
+                    setAbogadosList(await fetchAbogadosPorEspecialidad(data.codespecializacion));
                     setLugaresList(await fetchLugares());
                 }
 
                 setExpedienteData({ 
                     ...data,
-                    // Formato de fecha para el input type="date"
                     fechaetapa: data.fechaetapa ? new Date(data.fechaetapa).toISOString().split('T')[0] : '', 
                     documentos: data.documentos || [], 
                     isNewCase: false,
@@ -80,7 +107,8 @@ export function useExpedienteLogic() {
                 setError(data.mensaje);
                 setExpedienteData(prev => ({
                     ...initialExpedienteData,
-                    nocaso: nocaso, // Mantenemos el NoCaso ingresado
+                    nocaso: nocaso, 
+                    codespecializacion: data.codespecializacion, 
                 }));
             }
         } catch (err) {
@@ -92,48 +120,41 @@ export function useExpedienteLogic() {
         }
     }, []);
 
-    // 2. FUNCIÓN CREAR EXPEDIENTE (Regla D)
+    // 4. FUNCIÓN CREAR EXPEDIENTE (Regla D)
     const handleCrearExpediente = useCallback(async () => {
-        if (!noCasoInput) return;
+        if (!noCasoInput || !expedienteData.codespecializacion) return;
 
         setLoading(true);
         setError(null);
+        
+        const codEspecialidad = expedienteData.codespecializacion;
 
         try {
-            // Asumir que el backend tiene la especialización para el NoCaso dado
-            // 🛑 NECESITAS EL CODIGO DE ESPECIALIZACION DEL CASO PADRE 🛑
-            const codEspecialidadSimulada = 'LAB'; 
-
-            // D i. Un número de expediente (consecutivo)
             const nextId = await fetchSiguienteIdExpediente(); 
-            
-            // D ii, iii, iv. No. etapa (1), Fecha (hoy), Nombre etapa (primera)
             const today = new Date().toISOString().split('T')[0];
-            const primeraEtapa = await fetchPrimeraEtapa(codEspecialidadSimulada);
+            const primeraEtapa = await fetchPrimeraEtapa(codEspecialidad);
             
-            // D v. Abogados por especialidad
-            const abogados = await fetchAbogadosPorEspecialidad(codEspecialidadSimulada);
+            const abogados = await fetchAbogadosPorEspecialidad(codEspecialidad);
             setAbogadosList(abogados);
 
-            // D vi. Lista de Lugares
             const lugares = await fetchLugares();
             setLugaresList(lugares);
 
-            // Actualizar el Estado del Formulario en Modo Creación Activo
             setExpedienteData(prev => ({
                 ...initialExpedienteData, 
                 nocaso: noCasoInput,
-                idexpediente: nextId.toString(), // i. consecutivo
-                noetapa: primeraEtapa.noetapa, // ii. 1 
-                fechaetapa: today, // iii. fecha del día
-                nometapa: primeraEtapa.nometapa, // iv. nombre de la etapa
-                codespecializacion: codEspecialidadSimulada,
+                idexpediente: nextId.toString(), 
+                noetapa: primeraEtapa.noetapa, 
+                fechaetapa: today, 
+                nometapa: primeraEtapa.nometapa, 
+                codespecializacion: codEspecialidad,
                 
-                // Setear valores iniciales para las listas si existen elementos
+                cedula_abogado: abogados.length > 0 ? abogados[0].cedula : '', 
                 nombre_abogado: abogados.length > 0 ? abogados[0].nombre_completo : '', 
+                codlugar: lugares.length > 0 ? lugares[0].codlugar : '', 
                 ciudad: lugares.length > 0 ? lugares[0].nomlugar : '', 
                 
-                isNewCase: true, // Flag de modo creación ACTIVO
+                isNewCase: true, 
             }));
             
         } catch (err) {
@@ -143,67 +164,91 @@ export function useExpedienteLogic() {
         } finally {
             setLoading(false);
         }
-    }, [noCasoInput]);
+    }, [noCasoInput, expedienteData.codespecializacion]);
 
 
-    // 3. LÓGICA DE REGLAS A, B, C, D (useMemo)
-    const { 
-        isCaseFound, 
-        isCaseClosed, 
-        isCreateModeInitial, 
-        isCreateModeActive, 
-        isFullEditable,      
-        isGuardarDisabled 
-    } = useMemo(() => {
-        const found = !!expedienteData.idexpediente && !expedienteData.isNewCase; // Excluye el marcador de nuevo caso
+    // 5. HANDLER DE CAMBIOS
+    const handleExpedienteChange = useCallback((e) => {
+        const { name, value } = e.target;
         
-        // Regla A: Caso Existente CON Fecha Fin
-        const closed = found && !!expedienteData.fechafin_caso; 
-        
-        // Regla C: Caso no encontrado, pero hay un NoCaso listo para el botón 'Crear'
-        const createInitial = !found && !!noCasoInput && expedienteData.nocaso === noCasoInput && !loading; 
-        
-        // Regla D: El usuario presionó 'Crear'
-        const createActive = expedienteData.isNewCase; 
+        setExpedienteData(prev => {
+            if (name === 'cedula_abogado') {
+                const selectedAbogado = abogadosList.find(a => a.cedula === value);
+                return { 
+                    ...prev, 
+                    cedula_abogado: value, 
+                    nombre_abogado: selectedAbogado ? selectedAbogado.nombre_completo : prev.nombre_abogado
+                };
+            }
+            
+            if (name === 'codlugar') {
+                const selectedLugar = lugaresList.find(l => l.codlugar === value);
+                return { 
+                    ...prev, 
+                    codlugar: value, 
+                    ciudad: selectedLugar ? selectedLugar.nomlugar : prev.ciudad 
+                };
+            }
 
-        // Editable si es un caso abierto (Regla B) O si el modo 'Crear' está activo (Regla D)
-        const editable = (found && !closed) || createActive; 
+            return { ...prev, [name]: value };
+        });
+    }, [abogadosList, lugaresList]);
 
-        // Los inputs están deshabilitados si:
-        // 1. Caso Cerrado (Regla A)
-        // 2. Modo de Creación Inicial (Regla C - ANTES de presionar 'Crear').
-        const disabled = closed || createInitial;
 
-        // El botón Guardar se deshabilita si:
-        // 1. Caso Cerrado (Regla A)
-        // 2. No estamos en un modo editable (editable === false).
-        const guardarDisabled = closed || !editable; 
+    // 6. FUNCIÓN GUARDAR (Regla D y B) -> AHORA isGuardarDisabled ESTÁ DEFINIDO
+    const handleGuardarExpediente = useCallback(async () => {
+        if (isGuardarDisabled) return; // ✅ CORREGIDO: isGuardarDisabled ya está disponible
 
-        return { 
-            isCaseFound: found,
-            isCaseClosed: closed, 
-            isCreateModeInitial: createInitial,
-            isCreateModeActive: createActive,
-            isInputsDisabled: disabled,
-            isFullEditable: editable,
-            isGuardarDisabled: guardarDisabled,
+        setLoading(true);
+        setError(null);
+
+        const payload = {
+            idexpediente: expedienteData.idexpediente,
+            nocaso: expedienteData.nocaso,
+            noetapa: expedienteData.noetapa,
+            fechaetapa: expedienteData.fechaetapa,
+            cedula_abogado: expedienteData.cedula_abogado, 
+            codlugar: expedienteData.codlugar,             
+            codespecializacion: expedienteData.codespecializacion, 
+            suceso: expedienteData.suceso,
+            resultado: expedienteData.resultado,
+            nominstancia: expedienteData.nominstancia,
+            nombre_impugnacion: expedienteData.nombre_impugnacion,
         };
-    }, [expedienteData, noCasoInput, loading]);
+        
+        try {
+            if (expedienteData.isNewCase) {
+                // MODO CREAR (Regla D)
+                await createNewExpediente(payload);
+                alert(`Expediente ${payload.idexpediente} creado con éxito.`);
+            } else {
+                // MODO ACTUALIZAR (Regla B)
+                await updateExistingExpediente(payload); 
+                alert(`Expediente ${payload.idexpediente} actualizado con éxito.`);
+            }
 
-    // Handlers genéricos y placeholder
+            // Recargar el estado del expediente después de una operación exitosa
+            setNoCasoInput(expedienteData.nocaso);
+            await handleSearch(expedienteData.nocaso); 
+
+        } catch (err) {
+            console.error("Error al guardar expediente:", err);
+            setError(err.message || 'Fallo al guardar el expediente.');
+        } finally {
+            setLoading(false);
+        }
+    }, [isGuardarDisabled, expedienteData, handleSearch]);
+
+
+    // Handlers genéricos
     const handleKeyDown = (event) => {
         if (event.key === 'Enter') {
             handleSearch(noCasoInput);
         }
     };
-    const handleExpedienteChange = useCallback((e) => {
-        const { name, value } = e.target;
-        setExpedienteData(prev => ({ ...prev, [name]: value, }));
-    }, []);
-    const handleGuardarExpediente = useCallback(() => {
-        alert(`Guardando/Actualizando expediente ${expedienteData.idexpediente}... (Función a implementar)`);
-    }, [expedienteData]);
+    
 
+    // 7. RETURN
     return {
         // Estado y Data
         noCasoInput, setNoCasoInput,
