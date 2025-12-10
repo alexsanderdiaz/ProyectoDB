@@ -1,7 +1,20 @@
-import React from "react";
+
 import "../styles/Pages.css";
+import { useCaso } from "../context/CasoContext";
 
 export default function ExpedientePage() {
+
+  const { 
+    clienteCod, 
+    nombreApellido, 
+    casoData,
+    clienteExiste 
+  } = useCaso(); 
+
+  // Variables útiles para mostrar en ExpedientePage
+  const noCaso = casoData?.nocaso || 'No Seleccionado';
+  const clienteNombreCompleto = clienteExiste ? nombreApellido : 'Cliente no cargado';
+
   return (
     <div className="page-container">
 
