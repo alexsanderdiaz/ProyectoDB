@@ -3,13 +3,14 @@ from rest_framework.response import Response
 from rest_framework import status
 import traceback
 
-# Importar las funciones de servicio específicas de caso
-# Nota: Ajusta la ruta de importación si es necesario (ej: de .services a ..services)
+# Importa las funciones de servicio específicas de caso
 from .services.caso_service import (
     buscar_cliente_con_caso_activo,
     obtener_siguiente_no_caso,
     obtener_especializaciones,
-    crear_nuevo_caso
+    crear_nuevo_caso,
+    obtener_formas_pago,
+    registrar_pago_acuerdo,
 )
 
 # ==========================================================
@@ -76,6 +77,38 @@ class EspecializacionListView(APIView):
             return Response({"error": f"Error al obtener especializaciones: {str(e)}"}, 
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+#VIEW PARA FORMA PAGO
+
+class FormaPagoListView(APIView):
+    """Vista para obtener la lista de todas las formas de pago."""
+    def get(self, request):
+        try:
+            formas_pago = obtener_formas_pago()
+            return Response(formas_pago, status=status.HTTP_200_OK)
+        except Exception as e:
+            traceback.print_exc()
+            return Response({"error": f"Error al obtener formas de pago: {str(e)}"}, 
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+# Registrar Pago
+class RegistroPagoView(APIView):
+    """Vista para registrar un nuevo pago de acuerdo."""
+    def post(self, request):
+        try:
+            data = request.data
+            
+            # Llamar al servicio de registro de pago
+            resultado = registrar_pago_acuerdo(data) 
+            
+            return Response(resultado, status=status.HTTP_201_CREATED)
+        
+        except ValueError as ve:
+            # Captura errores de validación de datos (valor negativo, forma de pago vacía)
+            return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            traceback.print_exc() 
+            return Response({"error": f"Error interno al registrar el pago: {str(e)}"}, 
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class GestionCasoCrearView(APIView):
     """Vista para crear un nuevo caso."""

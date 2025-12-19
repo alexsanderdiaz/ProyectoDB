@@ -5,7 +5,9 @@ import {
     fetchClienteConCasoActivo, 
     fetchSiguienteNoCaso,
     fetchEspecializaciones,
-    createNewCase // IMPORTAR LA FUNCIÓN DE CREACIÓN
+    fetchFormasPago,
+    createNewCase,
+    registrarAcuerdoPago
 } from "../api/casoApi"; 
 
 // Estado inicial para limpiar el formulario de caso
@@ -17,37 +19,59 @@ const initialCasoData = {
     valor: ''
 };
 
+// Datos temporales para las formas de pago (Simulación de datos auxiliares)
+const temporaryFormasPago = [
+    { cod_forma_pago: 'EFECTIVO', nombre_forma_pago: 'Efectivo' },
+    { cod_forma_pago: 'TARJETA', nombre_forma_pago: 'Tarjeta de Crédito/Débito' },
+    { cod_forma_pago: 'TRANSFERENCIA', nombre_forma_pago: 'Transferencia Bancaria' },
+];
+
+
 export function useCasoLogic() {
-    // 2. ESTADO DEL CLIENTE
+    // ESTADO DEL CLIENTE
     const [nombreApellido, setNombreApellido] = useState(''); 
     const [clienteDoc, setClienteDoc] = useState(''); 
     const [clienteCod, setClienteCod] = useState(null); 
     
-    // 3. ESTADO DEL CASO Y LISTAS
+    // ESTADO DEL CASO Y LISTAS
     const [casoData, setCasoData] = useState(initialCasoData);
     const [listaCasosActivos, setListaCasosActivos] = useState([]); 
     const [listaEspecializaciones, setListaEspecializaciones] = useState([]); 
 
-    // 4. ESTADO DE LA INTERFAZ
+    const [listaFormasPago, setListaFormasPago] = useState([]);
+
+    // ESTADO DE LA INTERFAZ
     const [clienteExiste, setClienteExiste] = useState(null);
     const [casoActivoExiste, setCasoActivoExiste] = useState(false);
     const [isCaseInputDisabled, setIsCaseInputDisabled] = useState(true);
-    // NUEVO ESTADO: Bandera para saber si estamos en modo "Crear Caso Nuevo"
     const [isCreatingNewCase, setIsCreatingNewCase] = useState(false); 
+    
+    // ESTADOS para Acuerdo de Pago
+    const [showAcuerdoPagoForm, setShowAcuerdoPagoForm] = useState(false);
+    const [acuerdoPagoData, setAcuerdoPagoData] = useState({
+        valorAcuerdo: '',
+        formaPago: '',
+    });
 
 
-    // EFECTO: Cargar las especializaciones
+    // EFECTO: Cargar las especializaciones y formas pago
     useEffect(() => {
-        async function loadEspecializaciones() {
+        async function loadAuxiliaryData() {
             try {
-                const data = await fetchEspecializaciones();
-                setListaEspecializaciones(data);
+                // Cargar especializaciones
+                const espData = await fetchEspecializaciones();
+                setListaEspecializaciones(espData);
+                
+                // Cargar formas de pago desde el backend
+                const fpData = await fetchFormasPago();
+                setListaFormasPago(fpData);
+
             } catch (error) {
-                console.error("Error al cargar especializaciones:", error);
+                console.error("Error al cargar datos auxiliares:", error);
             }
         }
-        loadEspecializaciones();
-    }, []); 
+        loadAuxiliaryData();
+    }, []);
 
     // HANDLER: Limpia el documento cuando el usuario escribe en Nombre/Apellido
     const handleNombreApellidoChange = (name) => {
@@ -207,6 +231,54 @@ export function useCasoLogic() {
         setCasoData({ ...casoData, [e.target.name]: e.target.value });
     };
 
+    // ⭐️ LÓGICA DE VALIDACIÓN DEL BOTÓN ACEPTAR PAGO
+    const isAcuerdoPagoButtonDisabled = useMemo(() => {
+        const { valorAcuerdo, formaPago } = acuerdoPagoData;
+        const valorNumerico = parseFloat(valorAcuerdo);
+        
+        // Requiere: caso activo, formulario visible, valor positivo, forma de pago seleccionada.
+        return (
+            !casoActivoExiste || 
+            !showAcuerdoPagoForm ||
+            !valorAcuerdo || 
+            !formaPago || 
+            isNaN(valorNumerico) ||
+            valorNumerico <= 0
+        );
+
+    }, [casoActivoExiste, showAcuerdoPagoForm, acuerdoPagoData]);
+    
+    // HANDLER para cambios en el Acuerdo de Pago
+    const handleAcuerdoPagoChange = useCallback((e) => {
+        setAcuerdoPagoData(prevData => ({
+            ...prevData, 
+            [e.target.name]: e.target.value 
+        }));
+    }, []);
+
+    // HANDLER: Aceptar Acuerdo de Pago
+    const handleAceptarAcuerdoPago = useCallback(async () => {
+        if (isAcuerdoPagoButtonDisabled) {
+            alert("Por favor, ingrese un valor válido y seleccione la forma de pago.");
+            return;
+        }
+
+        try {
+            const resultado = await registrarAcuerdoPago(acuerdoPagoData);
+            
+            // Mostrar mensaje de éxito con el consecutivo
+            alert(`✅ ${resultado.mensaje}`);
+            
+            // Limpiar el formulario de acuerdo de pago después del éxito
+            setShowAcuerdoPagoForm(false);
+            setAcuerdoPagoData({ valorAcuerdo: '', formaPago: '' });
+
+        } catch (error) {
+            console.error("Error al registrar acuerdo de pago:", error);
+            alert(`Fallo al registrar el pago: ${error.message}`);
+        }
+    }, [isAcuerdoPagoButtonDisabled, acuerdoPagoData]);
+
 
     // LÓGICA DE VALIDACIÓN DEL BOTÓN GUARDAR
     const isSaveButtonDisabled = useMemo(() => {
@@ -215,7 +287,7 @@ export function useCasoLogic() {
             return true;
         }
         
-        // Validaciones obligatorias
+        // Validaciones obligatorias del caso
         const { nocaso, fechaInicio, especializacion, valor } = casoData;
         const valorNumerico = parseFloat(valor);
         
@@ -258,18 +330,20 @@ export function useCasoLogic() {
 
     // FUNCIÓN: Handler para el botón Acuerdo de Pago
     const handleAcuerdoPago = useCallback(() => {
-        if (window.confirm("¿Desea incluir un acuerdo de pago para este caso?")) {
-            console.log("Acuerdo de pago aceptado por el usuario.");
-        } else {
-            console.log("Acuerdo de pago cancelado por el usuario.");
+        // Toglea la visibilidad
+        setShowAcuerdoPagoForm(prev => !prev);
+        
+        // Si se va a ocultar, limpiar los datos del acuerdo
+        if (showAcuerdoPagoForm) {
+             setAcuerdoPagoData({ valorAcuerdo: '', formaPago: '' });
         }
-    }, []);
+    }, [showAcuerdoPagoForm]);
 
 
-    // 6. DEVOLVER TODOS LOS ESTADOS Y FUNCIONES QUE EL COMPONENTE NECESITA
+    // DEVOLVER TODOS LOS ESTADOS Y FUNCIONES QUE EL COMPONENTE NECESITA
     return {
         nombreApellido,
-        setNombreApellido: handleNombreApellidoChange, // EXPORTAR EL HANDLER CORREGIDO
+        setNombreApellido: handleNombreApellidoChange, 
         clienteDoc,
         handleDocChange,
         clienteExiste,
@@ -285,5 +359,12 @@ export function useCasoLogic() {
         handleAcuerdoPago, 
         isCaseInputDisabled,
         isSaveButtonDisabled, 
+        
+        showAcuerdoPagoForm,
+        acuerdoPagoData,
+        handleAcuerdoPagoChange,
+        listaFormasPago,
+        handleAceptarAcuerdoPago, 
+        isAcuerdoPagoButtonDisabled,
     };
 }

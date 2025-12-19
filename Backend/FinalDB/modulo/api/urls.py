@@ -27,6 +27,8 @@ urlpatterns = [
     path("gestion-caso/buscar-cliente/", GestionCasoBusquedaView.as_view()),
     path('gestion-caso/siguiente-nocaso/', GestionCasoSiguienteNoCasoView.as_view()),
     path('datos-auxiliares/especializaciones/', EspecializacionListView.as_view()),
+    path('datos-auxiliares/formas-pago/', FormaPagoListView.as_view()),
+    path('gestion-caso/registrar-pago/', RegistroPagoView.as_view()),
     path('gestion-caso/crear/', GestionCasoCrearView.as_view()),
 
 
@@ -37,14 +39,13 @@ urlpatterns = [
         name="expediente-busqueda"
     ),
     
-    # ✅ RUTA FALTANTE O INCORRECTA
     path(
         "gestion-expediente/datos-creacion/<str:accion>/", 
         ExpedienteCreacionDataView.as_view(), 
         name="expediente-creacion-data"
     ),
     
-    # Si tienes una ruta separada para Crear/Actualizar Expediente (POST/PUT)
+    
     path(
         "gestion-expediente/accion/", 
         GestionExpedienteAccionView.as_view(), 

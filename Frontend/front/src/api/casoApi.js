@@ -52,13 +52,48 @@ export async function fetchEspecializaciones() {
     return response.json(); 
 }
 
+export async function fetchFormasPago() {
+    // Usamos la nueva ruta mapeada en urls.py
+    const url = `${API_BASE_URL}datos-auxiliares/formas-pago/`; 
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Error al obtener formas de pago: ${response.status}`);
+    }
+    return response.json(); 
+}
 
-// Lógica de Creación (Próximo paso)
+// Registrar Acuerdo de Pago
+export async function registrarAcuerdoPago(acuerdoData) {
+    const url = `${API_BASE_URL}gestion-caso/registrar-pago/`; 
+
+    const payload = { 
+        // Convertir a número antes de enviar, usando 0 si es inválido
+        valorAcuerdo: parseFloat(acuerdoData.valorAcuerdo) || 0,
+        formaPago: acuerdoData.formaPago,
+    };
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ 
+            error: 'Respuesta sin JSON o error desconocido.' 
+        }));
+        throw new Error(`Error al registrar acuerdo de pago: ${response.status} - ${errorData.error || errorData.message}`);
+    }
+    return response.json();
+}
+
+
 export async function createNewCase(clienteId, caseData) {
     const url = `${API_BASE_URL}gestion-caso/crear/`; 
 
-    // ✅ Asegurar que el payload enviado coincida con lo que el backend espera.
-    // El backend espera 'cod_cliente' separado y los datos del caso.
     const payload = { 
         cod_cliente: clienteId,
         nocaso: caseData.nocaso,
@@ -88,3 +123,5 @@ export async function createNewCase(clienteId, caseData) {
     }
     return response.json();
 }
+
+//Nueva funcion para traer datos del back 

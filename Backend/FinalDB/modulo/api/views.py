@@ -9,13 +9,15 @@ from .gestion_caso_views import (
     GestionCasoBusquedaView,
     GestionCasoSiguienteNoCasoView,
     EspecializacionListView,
-    GestionCasoCrearView
+    GestionCasoCrearView,
+    FormaPagoListView,
+    RegistroPagoView,
 )
 
 from .gestion_expediente_views import (
     GestionExpedienteBusquedaView,
     ExpedienteCreacionDataView, 
-    GestionExpedienteAccionView, # ✅ Asegurar esta importación
+    GestionExpedienteAccionView,
 )
 
 

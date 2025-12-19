@@ -149,3 +149,28 @@
 .arrow-btn:hover {
   background: #c4c4c4;
 }
+
+/* Estilos para el contenedor del botón y los campos */
+.row-inline-grow {
+    display: flex;
+    gap: 10px; /* Espacio entre el botón y los campos */
+    flex-grow: 1; /* Permite que el contenedor use el espacio disponible */
+    align-items: center; /* Centra verticalmente los elementos */
+}
+
+/* Estilos para los campos del acuerdo de pago */
+.acuerdo-pago-fields {
+    display: flex;
+    gap: 10px;
+    flex-grow: 1; /* Permite que los campos de pago usen el resto del espacio */
+}
+
+.input-valor,
+.select-formapago {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+    flex-grow: 1; /* Distribuye el espacio entre Valor y Método de Pago */
+    min-width: 120px;
+}

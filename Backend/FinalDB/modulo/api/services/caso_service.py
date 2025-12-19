@@ -115,6 +115,67 @@ def obtener_especializaciones():
     # fetch="all" para obtener todos los registros
     return run_query(sql, fetch="all")
 
+#FUNCION OBTENER FORMAS PAGO
+
+def obtener_formas_pago():
+    """
+    Obtiene la lista de códigos y nombres de formas de pago desde la tabla FORMAPAGO.
+    Utiliza IDFORMAPAGO como código y DESCFORMAPAGO (según indicación) como nombre.
+    """
+    # CORRECCIÓN: Se usa IDFORMAPAGO y el campo DESCFORMAPAGO para la descripción.
+    sql = "SELECT IDFORMAPAGO AS cod_forma_pago, DESCFORMAPAGO AS nombre_forma_pago FROM FORMAPAGO"
+    
+    # fetch="all" para obtener todos los registros
+    return run_query(sql, fetch="all")
+
+
+# Obtener el siguiente CONSECPAGO
+def obtener_siguiente_consecutivo_pago():
+    """
+    Obtiene el siguiente CONSECPAGO disponible de la tabla PAGO.
+    Usa NVL(MAX(...), 0) + 1 para asegurar que empieza en 1 si la tabla está vacía.
+    """
+    sql = "SELECT NVL(MAX(CONSECPAGO), 0) + 1 AS siguiente_consecutivo FROM PAGO"
+    # run_query debe devolver un diccionario con el resultado
+    resultado = run_query(sql, fetch="one")
+    return resultado['siguiente_consecutivo']
+
+# Registrar Pago
+def registrar_pago_acuerdo(data):
+    """
+    Registra un pago en la tabla PAGO con los valores de acuerdo.
+    CODFRANQUICIA y NTARJETA se establecen como NULL.
+    """
+    valor_pago = float(data.get('valorAcuerdo', 0))
+    forma_pago_id = data.get('formaPago')
+
+    if not forma_pago_id or valor_pago <= 0:
+        raise ValueError("Faltan datos obligatorios: ID de forma de pago o Valor de acuerdo inválido.")
+
+    consec_pago = obtener_siguiente_consecutivo_pago()
+    
+    # El SQL usa SYSDATE para la fecha actual y NULL para campos opcionales
+    sql = """
+        INSERT INTO PAGO 
+        (CONSECPAGO, CODFRANQUICIA, IDFORMAPAGO, FECHAPAGO, VALORPAGO, NTARJETA)
+        VALUES 
+        (:consec_pago, NULL, :idformapago, SYSDATE, :valorpago, NULL)
+    """
+
+    params = {
+        'consec_pago': consec_pago,
+        'idformapago': forma_pago_id,
+        'valorpago': valor_pago,
+    }
+
+    try:
+        run_query(sql, params, fetch=None) # fetch=None para INSERT
+        return {"consecutivo_pago": consec_pago, "mensaje": f"Pago de acuerdo registrado con consecutivo {consec_pago}"}
+    except Exception as db_error:
+        print(f"Error en DB al registrar pago: {db_error}")
+        raise # Re-lanzar la excepción para que la vista la maneje
+
+
 #FUNCION PARA EL NSERT DE CASO
 
 def crear_nuevo_caso(cod_cliente, case_data):
@@ -137,7 +198,7 @@ def crear_nuevo_caso(cod_cliente, case_data):
     except (TypeError, ValueError):
         valor = 0.0 # O levanta una excepción si el valor es obligatorio
 
-    # 2. SQL: Uso de CASE WHEN para asegurar que el campo FECHAFIN se inserte como NULL si está vacío.
+    # SQL: Uso de CASE WHEN para asegurar que el campo FECHAFIN se inserte como NULL si está vacío.
     sql = """
         INSERT INTO CASO 
         (NOCASO, CODESPECIALIZACION, CODCLIENTE, FECHAINICIO, FECHAFIN, VALOR)
@@ -156,11 +217,11 @@ def crear_nuevo_caso(cod_cliente, case_data):
         'codespecializacion': codespecializacion,
         'codcliente': cod_cliente,
         'fechainicio': fechainicio,
-        'fechafin': fechafin, # Pasamos el valor que puede ser None
+        'fechafin': fechafin,
         'valor': valor,
     }
 
-    # 3. Ejecutar la consulta (asumiendo que run_query maneja la conexión y el commit)
+    # Ejecutar la consulta (asumiendo que run_query maneja la conexión y el commit)
     try:
         run_query(sql, params, fetch=None) 
     except Exception as db_error:

@@ -12,7 +12,7 @@ from .services.expediente_service import (
     obtener_abogados_por_especialidad,
     obtener_lugares,
     crear_expediente,
-    actualizar_expediente, # Añadir la de actualizar
+    actualizar_expediente,
 )
 
 import traceback
@@ -31,7 +31,7 @@ class GestionExpedienteBusquedaView(APIView):
                 return Response(resultado, status=status.HTTP_200_OK)
             else:
                 # Si no hay expediente, el servicio ya devolvió el CODESPECIALIZACION del CASO (si existe)
-                # Devolver 404 para que el frontend entre en modo 'Crear' (Regla C)
+                # Devolver 404 para que el frontend entre en modo 'Crear'
                 return Response(resultado, status=status.HTTP_404_NOT_FOUND) 
                 
         except Exception as e:
@@ -45,11 +45,11 @@ class ExpedienteCreacionDataView(APIView):
         codespecializacion = request.query_params.get('codespecializacion')
 
         try:
-            if accion == 'siguiente-id': # <-- Añadir esta lógica
+            if accion == 'siguiente-id': 
                 siguiente_id = obtener_siguiente_consecutivo_expediente()
                 return Response({"idexpediente": siguiente_id}, status=status.HTTP_200_OK)
             
-            elif accion == 'primera-etapa': # <-- Añadir esta lógica
+            elif accion == 'primera-etapa':
                 if not codespecializacion:
                      return Response({"error": "Parámetro 'codespecializacion' requerido."}, status=status.HTTP_400_BAD_REQUEST)
                 etapa = obtener_primera_etapa_por_especialidad(codespecializacion)
@@ -65,7 +65,7 @@ class ExpedienteCreacionDataView(APIView):
                 abogados = obtener_abogados_por_especialidad(codespecializacion) 
                 return Response(abogados, status=status.HTTP_200_OK)
             
-            elif accion == 'lugares': # <-- Añadir esta lógica
+            elif accion == 'lugares':
                 lugares = obtener_lugares()
                 return Response(lugares, status=status.HTTP_200_OK)
                 
@@ -74,10 +74,10 @@ class ExpedienteCreacionDataView(APIView):
 
         except Exception as e:
             traceback.print_exc()
-            return Response({"error": f"Error interno: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) # <-- Corregir el manejo de errores
+            return Response({"error": f"Error interno: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# ✅ Renombrar la vista de manipulación para que coincida con urls.py
+
 class GestionExpedienteAccionView(APIView): 
     """Vista para crear (POST) o actualizar (PUT) un expediente."""
     

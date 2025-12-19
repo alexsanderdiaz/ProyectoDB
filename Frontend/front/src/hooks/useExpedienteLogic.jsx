@@ -33,7 +33,7 @@ const initialExpedienteData = {
 };
 
 export function useExpedienteLogic() {
-    // 1. ESTADOS (STATES)
+    // ESTADOS (STATES)
     const [noCasoInput, setNoCasoInput] = useState('');
     const [expedienteData, setExpedienteData] = useState(initialExpedienteData);
     const [loading, setLoading] = useState(false);
@@ -42,7 +42,7 @@ export function useExpedienteLogic() {
     const [lugaresList, setLugaresList] = useState([]);
 
     
-    // 2. LÓGICA DE REGLAS A, B, C, D (useMemo) -> MOVIDO AQUÍ PARA DEFINIR PRIMERO
+    // LÓGICA DE REGLAS
     const { 
         isCaseFound, 
         isCaseClosed, 
@@ -73,7 +73,7 @@ export function useExpedienteLogic() {
     }, [expedienteData, noCasoInput, loading]);
 
 
-    // 3. LÓGICA DE BÚSQUEDA (Depende de Estados, pero no de la salida del useMemo)
+    // LÓGICA DE BÚSQUEDA (Depende de Estados, pero no de la salida del useMemo)
     const handleSearch = useCallback(async (nocaso) => {
         if (!nocaso) {
             setError("Por favor, ingrese un número de caso.");
@@ -89,7 +89,7 @@ export function useExpedienteLogic() {
             const data = await fetchExpedientePorNoCaso(nocaso);
 
             if (data.encontrado) {
-                // Caso Existente (Reglas A o B)
+                // Caso Existente
                 if (!data.fechafin_caso) {
                     setAbogadosList(await fetchAbogadosPorEspecialidad(data.codespecializacion));
                     setLugaresList(await fetchLugares());
@@ -103,7 +103,7 @@ export function useExpedienteLogic() {
                 });
                 
             } else {
-                // Caso No encontrado -> Modo Creación (Regla C)
+                // Caso No encontrado -> Modo Creación
                 setError(data.mensaje);
                 setExpedienteData(prev => ({
                     ...initialExpedienteData,
@@ -120,7 +120,7 @@ export function useExpedienteLogic() {
         }
     }, []);
 
-    // 4. FUNCIÓN CREAR EXPEDIENTE (Regla D)
+    // FUNCIÓN CREAR EXPEDIENTE 
     const handleCrearExpediente = useCallback(async () => {
         if (!noCasoInput || !expedienteData.codespecializacion) return;
 
@@ -167,7 +167,7 @@ export function useExpedienteLogic() {
     }, [noCasoInput, expedienteData.codespecializacion]);
 
 
-    // 5. HANDLER DE CAMBIOS
+    // HANDLER DE CAMBIOS
     const handleExpedienteChange = useCallback((e) => {
         const { name, value } = e.target;
         
@@ -195,9 +195,9 @@ export function useExpedienteLogic() {
     }, [abogadosList, lugaresList]);
 
 
-    // 6. FUNCIÓN GUARDAR (Regla D y B) -> AHORA isGuardarDisabled ESTÁ DEFINIDO
+    // FUNCIÓN GUARDAR 
     const handleGuardarExpediente = useCallback(async () => {
-        if (isGuardarDisabled) return; // ✅ CORREGIDO: isGuardarDisabled ya está disponible
+        if (isGuardarDisabled) return;
 
         setLoading(true);
         setError(null);
@@ -218,11 +218,11 @@ export function useExpedienteLogic() {
         
         try {
             if (expedienteData.isNewCase) {
-                // MODO CREAR (Regla D)
+                // MODO CREAR
                 await createNewExpediente(payload);
                 alert(`Expediente ${payload.idexpediente} creado con éxito.`);
             } else {
-                // MODO ACTUALIZAR (Regla B)
+                // MODO ACTUALIZAR
                 await updateExistingExpediente(payload); 
                 alert(`Expediente ${payload.idexpediente} actualizado con éxito.`);
             }
@@ -248,7 +248,7 @@ export function useExpedienteLogic() {
     };
     
 
-    // 7. RETURN
+    // RETURN
     return {
         // Estado y Data
         noCasoInput, setNoCasoInput,

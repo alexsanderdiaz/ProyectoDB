@@ -2,7 +2,7 @@
 
 from ..db import run_query
 
-# --- [FUNCIONES DE BÚSQUEDA Y DATOS EXISTENTES (Reglas A, B, C)] ---
+# --- [FUNCIONES DE BÚSQUEDA Y DATOS EXISTENTES] ---
 
 def buscar_expediente_por_nocaso(nocaso):
     """
@@ -71,7 +71,7 @@ def buscar_expediente_por_nocaso(nocaso):
 
 def obtener_codespecializacion_caso(nocaso):
 
-    #Obtiene el codespecializacion de la tabla CASO para la Regla C.
+    #Obtiene el codespecializacion de la tabla CASO.
 
     sql = "SELECT CODESPECIALIZACION FROM CASO WHERE NOCASO = :nocaso"
     params = {'nocaso': nocaso}
@@ -79,7 +79,7 @@ def obtener_codespecializacion_caso(nocaso):
     return result.get('codespecializacion') if result else None
 
 
-# --- [FUNCIONES DE DATOS INICIALES PARA CREACIÓN (Regla D)] ---
+# --- [FUNCIONES DE DATOS INICIALES PARA CREACIÓN] ---
 
 def obtener_siguiente_consecutivo_expediente():
     """
@@ -116,7 +116,7 @@ def obtener_primera_etapa_por_especialidad(codespecializacion):
     return run_query(sql, params, fetch="one")
 
 def obtener_abogados_por_especialidad(codespecializacion):
-    """Obtiene abogados asociados a una especialización (Regla D.v)."""
+    """Obtiene abogados asociados a una especialización."""
     
     if not codespecializacion:
         return [] 
@@ -137,16 +137,31 @@ def obtener_abogados_por_especialidad(codespecializacion):
     params = {'codespecializacion': codespecializacion}
     
     # Intenta ejecutar la consulta. Si no hay resultados, run_query devuelve una lista vacía [], 
-    # y la vista devuelve 200 OK con [] (lo cual es correcto).
+    # y la vista devuelve 200 OK con [] (correcto).
     return run_query(sql, params, fetch="all")
 
-def obtener_lugares():
-    """Obtiene la lista de lugares (Regla D.vi)."""
-    sql = "SELECT CODLUGAR, NOMLUGAR FROM LUGAR ORDER BY NOMLUGAR"
-    return run_query(sql, fetch="all")
+def obtener_lugares(idtipolugar=None):
+    """
+    Obtiene la lista de lugares. Ahora filtra por tipo_lugar='CIU' por defecto.
+    """
+    sql = """
+        SELECT
+            CODLUGAR,
+            NOMLUGAR
+        FROM
+            LUGAR
+        WHERE
+            IDTIPOLUGAR = :idtipolugar
+        ORDER BY
+            NOMLUGAR
+    """
+    # Establecer 'CIU' como valor por defecto si no se pasa idtipolugar
+    params = {'idtipolugar': idtipolugar if idtipolugar is not None else 'CIU'}
+    
+    return run_query(sql, params, fetch="all")
 
 
-# --- [FUNCIONES DE CREACIÓN Y ACTUALIZACIÓN (Reglas D y B)] ---
+# --- [FUNCIONES DE CREACIÓN Y ACTUALIZACIÓN ] ---
 
 def crear_expediente(data):
     """
